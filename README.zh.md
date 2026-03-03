@@ -11,7 +11,7 @@
 
 ## 演示
 
-<video src="media/esp32c5.mp4" width="100%" controls></video>
+<video src="https://github.com/tianrking/espclaw/raw/main/media/esp32c5.mp4" width="100%" controls></video>
 
 ## 支持的目标芯片
 
