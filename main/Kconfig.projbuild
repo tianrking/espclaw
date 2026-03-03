@@ -1,0 +1,127 @@
+menu "ESPClaw Configuration"
+
+    config ESPCLAW_WIFI_SSID
+        string "WiFi SSID (testing only)"
+        default ""
+        help
+            WiFi network name fallback. Use NVS provisioning in production.
+
+    config ESPCLAW_WIFI_PASSWORD
+        string "WiFi Password (testing only)"
+        default ""
+
+    menu "LLM Settings"
+        choice ESPCLAW_LLM_BACKEND
+            prompt "LLM Backend"
+            default ESPCLAW_LLM_BACKEND_ANTHROPIC
+            help
+                Select the LLM provider. Any OpenAI-compatible endpoint
+                can be used via the "Custom" option.
+
+            config ESPCLAW_LLM_BACKEND_ANTHROPIC
+                bool "Anthropic (Claude)"
+            config ESPCLAW_LLM_BACKEND_OPENAI
+                bool "OpenAI"
+            config ESPCLAW_LLM_BACKEND_OPENROUTER
+                bool "OpenRouter"
+            config ESPCLAW_LLM_BACKEND_OLLAMA
+                bool "Ollama (local)"
+            config ESPCLAW_LLM_BACKEND_CUSTOM
+                bool "Custom (OpenAI-compatible)"
+        endchoice
+
+        config ESPCLAW_LLM_BACKEND_INT
+            int
+            default 0 if ESPCLAW_LLM_BACKEND_ANTHROPIC
+            default 1 if ESPCLAW_LLM_BACKEND_OPENAI
+            default 2 if ESPCLAW_LLM_BACKEND_OPENROUTER
+            default 3 if ESPCLAW_LLM_BACKEND_OLLAMA
+            default 4 if ESPCLAW_LLM_BACKEND_CUSTOM
+
+        config ESPCLAW_LLM_API_KEY
+            string "API Key"
+            default ""
+            help
+                API key for the selected LLM provider.
+                Leave empty for Ollama (no auth needed).
+
+        config ESPCLAW_LLM_BASE_URL
+            string "Base URL (leave empty for default)"
+            default ""
+            help
+                Custom endpoint URL, e.g. https://api.deepseek.com/v1
+                For OpenAI-compatible providers. Leave empty to use
+                the provider's official default endpoint.
+
+        config ESPCLAW_LLM_MODEL
+            string "Model name (leave empty for default)"
+            default ""
+            help
+                Model identifier, e.g. gpt-4o-mini, claude-3-haiku-20240307,
+                deepseek-chat, gemini-pro, qwen2.5:7b
+                Leave empty to use the built-in default for each backend.
+    endmenu
+
+    config ESPCLAW_STUB_LLM
+        bool "Stub LLM responses (offline testing)"
+        default n
+
+    config ESPCLAW_STUB_TELEGRAM
+        bool "Stub Telegram (offline testing)"
+        default n
+
+    config ESPCLAW_EMULATOR_MODE
+        bool "Offline emulator mode"
+        default n
+
+    menu "GPIO Tool Safety"
+        config ESPCLAW_GPIO_MIN_PIN
+            int "Minimum GPIO pin for tools"
+            range 0 48
+            default 2
+        config ESPCLAW_GPIO_MAX_PIN
+            int "Maximum GPIO pin for tools"
+            range 0 48
+            default 10
+        config ESPCLAW_GPIO_ALLOWED_PINS
+            string "Allowed GPIO pins list (optional CSV)"
+            default ""
+    endmenu
+
+    menu "I2C Configuration"
+        config ESPCLAW_I2C_DEFAULT_SDA
+            int "Default I2C SDA pin"
+            range 0 48
+            default 6
+        config ESPCLAW_I2C_DEFAULT_SCL
+            int "Default I2C SCL pin"
+            range 0 48
+            default 7
+        config ESPCLAW_I2C_MAX_FREQ_HZ
+            int "Max I2C frequency (Hz)"
+            default 400000
+    endmenu
+
+    menu "PWM/LEDC Configuration"
+        config ESPCLAW_PWM_MAX_CHANNELS
+            int "Max PWM channels"
+            range 1 8
+            default 4
+        config ESPCLAW_PWM_DEFAULT_FREQ_HZ
+            int "Default PWM frequency (Hz)"
+            default 5000
+    endmenu
+
+    menu "Factory Reset"
+        config ESPCLAW_FACTORY_RESET_PIN
+            int "Factory reset button GPIO"
+            range 0 48
+            default 9
+        config ESPCLAW_FACTORY_RESET_HOLD_MS
+            int "Factory reset hold time (ms)"
+            range 1000 60000
+            default 5000
+    endmenu
+
+endmenu
+

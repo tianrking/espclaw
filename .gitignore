@@ -1,0 +1,31 @@
+# ESP-IDF build output
+build/
+sdkconfig
+sdkconfig.old
+dependencies.lock
+
+# Managed components cache
+managed_components/
+
+# Python virtualenv
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Secrets / provisioning (never commit these)
+secrets.env
+*.key
+nvs_partition*.bin
