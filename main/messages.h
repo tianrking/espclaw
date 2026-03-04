@@ -16,6 +16,13 @@ typedef enum {
     MSG_SOURCE_CRON      = 2,
     MSG_SOURCE_WEBSOCKET = 3,   /* S3 only */
     MSG_SOURCE_HEARTBEAT = 4,   /* S3 only */
+    MSG_SOURCE_DINGTALK  = 5,   /* One-way notification */
+    MSG_SOURCE_DISCORD   = 6,   /* One-way notification */
+    MSG_SOURCE_SLACK     = 7,   /* One-way notification */
+    MSG_SOURCE_WECOM     = 8,   /* One-way notification */
+    MSG_SOURCE_LARK      = 9,   /* One-way notification */
+    MSG_SOURCE_PUSHPLUS  = 10,  /* One-way notification */
+    MSG_SOURCE_BARK      = 11,  /* One-way notification */
 } message_source_t;
 
 /* Inbound message (any channel -> agent) */

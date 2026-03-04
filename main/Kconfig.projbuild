@@ -66,13 +66,198 @@ menu "ESPClaw Configuration"
         bool "Stub LLM responses (offline testing)"
         default n
 
-    config ESPCLAW_STUB_TELEGRAM
-        bool "Stub Telegram (offline testing)"
-        default n
-
     config ESPCLAW_EMULATOR_MODE
         bool "Offline emulator mode"
         default n
+
+    # =========================================================================
+    # Channel Configuration
+    # Enable only the channels you need to save flash and RAM.
+    # =========================================================================
+    menu "Channels"
+
+        # ---------------------------------------------------------------------
+        # Serial Channel
+        # ---------------------------------------------------------------------
+        config ESPCLAW_CHANNEL_SERIAL
+            bool "Enable Serial Channel"
+            default y
+            help
+                Serial console channel for USB/UART communication.
+                This is the primary debugging interface.
+
+        # ---------------------------------------------------------------------
+        # Telegram Bot (bidirectional)
+        # ---------------------------------------------------------------------
+        config ESPCLAW_CHANNEL_TELEGRAM
+            bool "Enable Telegram Bot"
+            default n
+            help
+                Telegram bot channel with long polling support.
+                Requires bot token from @BotFather.
+
+        config ESPCLAW_STUB_TELEGRAM
+            bool "Stub Telegram (offline testing)"
+            default n
+            depends on ESPCLAW_CHANNEL_TELEGRAM
+
+        config ESPCLAW_TELEGRAM_TOKEN
+            string "Telegram Bot Token"
+            default ""
+            depends on ESPCLAW_CHANNEL_TELEGRAM && !ESPCLAW_STUB_TELEGRAM
+            help
+                Bot token from @BotFather, format: 123456789:ABCdefGHIjklMNOpqrsTUVwxyz
+
+        # ---------------------------------------------------------------------
+        # DingTalk Webhook (钉钉机器人)
+        # ---------------------------------------------------------------------
+        config ESPCLAW_CHANNEL_DINGTALK
+            bool "Enable DingTalk Webhook"
+            default n
+            help
+                DingTalk custom robot webhook (one-way notification).
+                Supports HMAC-SHA256 signing for security.
+
+        config ESPCLAW_DINGTALK_WEBHOOK
+            string "DingTalk Webhook URL"
+            default ""
+            depends on ESPCLAW_CHANNEL_DINGTALK
+            help
+                DingTalk custom robot webhook URL.
+                Example: https://oapi.dingtalk.com/robot/send?access_token=xxx
+
+        config ESPCLAW_DINGTALK_SECRET
+            string "DingTalk Secret (加签密钥)"
+            default ""
+            depends on ESPCLAW_CHANNEL_DINGTALK
+            help
+                Optional secret for HMAC-SHA256 signing.
+                Leave empty if using keyword security instead.
+
+        # ---------------------------------------------------------------------
+        # Discord Webhook
+        # ---------------------------------------------------------------------
+        config ESPCLAW_CHANNEL_DISCORD
+            bool "Enable Discord Webhook"
+            default n
+            help
+                Discord channel webhook (one-way notification).
+                Create a webhook in your Discord server settings.
+
+        config ESPCLAW_DISCORD_WEBHOOK
+            string "Discord Webhook URL"
+            default ""
+            depends on ESPCLAW_CHANNEL_DISCORD
+            help
+                Discord webhook URL.
+                Example: https://discord.com/api/webhooks/123456789/ABCdef...
+
+        # ---------------------------------------------------------------------
+        # Slack Webhook
+        # ---------------------------------------------------------------------
+        config ESPCLAW_CHANNEL_SLACK
+            bool "Enable Slack Webhook"
+            default n
+            help
+                Slack incoming webhook (one-way notification).
+                Create an incoming webhook in your Slack workspace.
+
+        config ESPCLAW_SLACK_WEBHOOK
+            string "Slack Webhook URL"
+            default ""
+            depends on ESPCLAW_CHANNEL_SLACK
+            help
+                Slack incoming webhook URL.
+                Example: https://hooks.slack.com/services/T000/B000/XXXX
+
+        # ---------------------------------------------------------------------
+        # WeCom Webhook (企业微信群机器人)
+        # ---------------------------------------------------------------------
+        config ESPCLAW_CHANNEL_WECOM
+            bool "Enable WeCom Webhook"
+            default n
+            help
+                WeCom (企业微信) group robot webhook (one-way notification).
+                Supports markdown formatting.
+
+        config ESPCLAW_WECOM_WEBHOOK
+            string "WeCom Webhook URL"
+            default ""
+            depends on ESPCLAW_CHANNEL_WECOM
+            help
+                WeCom group robot webhook URL.
+                Example: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx
+
+        # ---------------------------------------------------------------------
+        # Lark/Feishu Webhook (飞书机器人)
+        # ---------------------------------------------------------------------
+        config ESPCLAW_CHANNEL_LARK
+            bool "Enable Lark/Feishu Webhook"
+            default n
+            help
+                Lark/Feishu (飞书) custom bot webhook (one-way notification).
+                Supports signature verification for security.
+
+        config ESPCLAW_LARK_WEBHOOK
+            string "Lark Webhook URL"
+            default ""
+            depends on ESPCLAW_CHANNEL_LARK
+            help
+                Lark/Feishu custom bot webhook URL.
+                Example: https://open.larksuite.com/open-apis/bot/v2/hook/xxx
+
+        config ESPCLAW_LARK_SECRET
+            string "Lark Secret (签名密钥)"
+            default ""
+            depends on ESPCLAW_CHANNEL_LARK
+            help
+                Optional secret for signature verification.
+
+        # ---------------------------------------------------------------------
+        # Pushplus (推送加)
+        # ---------------------------------------------------------------------
+        config ESPCLAW_CHANNEL_PUSHPLUS
+            bool "Enable Pushplus"
+            default n
+            help
+                Pushplus (推送加) notification service (one-way).
+                Supports WeChat, WeCom, DingTalk, Feishu, etc.
+                Website: http://www.pushplus.plus/
+
+        config ESPCLAW_PUSHPLUS_TOKEN
+            string "Pushplus Token"
+            default ""
+            depends on ESPCLAW_CHANNEL_PUSHPLUS
+            help
+                Your pushplus token from the website.
+
+        # ---------------------------------------------------------------------
+        # Bark iOS Push
+        # ---------------------------------------------------------------------
+        config ESPCLAW_CHANNEL_BARK
+            bool "Enable Bark iOS Push"
+            default n
+            help
+                Bark iOS push notification (one-way).
+                Requires Bark app installed on iPhone.
+                App Store: https://apps.apple.com/app/id1403753865
+
+        config ESPCLAW_BARK_KEY
+            string "Bark Device Key"
+            default ""
+            depends on ESPCLAW_CHANNEL_BARK
+            help
+                Your Bark device key from the app.
+
+        config ESPCLAW_BARK_SERVER
+            string "Bark Server URL (optional)"
+            default "https://api.day.app"
+            depends on ESPCLAW_CHANNEL_BARK
+            help
+                Custom Bark server URL (for self-hosted).
+                Default: https://api.day.app
+
+    endmenu
 
     menu "GPIO Tool Safety"
         config ESPCLAW_GPIO_MIN_PIN
@@ -124,4 +309,3 @@ menu "ESPClaw Configuration"
     endmenu
 
 endmenu
-

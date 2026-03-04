@@ -18,6 +18,7 @@
 #include "config.h"
 #include "platform.h"
 #include "util/json_util.h"
+#include "util/ratelimit.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -120,6 +121,16 @@ static void agent_task(void *arg)
             continue;
         }
 
+        /* Rate limit check */
+        char rl_reason[128];
+        if (!ratelimit_check(rl_reason, sizeof(rl_reason))) {
+            snprintf(out.text, sizeof(out.text), "[rate limited] %s", rl_reason);
+            out.target  = in.source;
+            out.chat_id = in.chat_id;
+            message_bus_post_outbound(s_bus, &out, pdMS_TO_TICKS(200));
+            continue;
+        }
+
         /* 1. Add user turn */
         session_append(&s_session, "user", in.text);
 
@@ -146,6 +157,9 @@ static void agent_task(void *arg)
 
             esp_err_t err = llm->complete(sys_prompt, msgs_json, tools_json,
                                           reply, LLM_RESPONSE_BUF_SIZE);
+            if (err == ESP_OK) {
+                ratelimit_record_request();
+            }
             if (err != ESP_OK) {
                 snprintf(out.text, sizeof(out.text),
                          "[error] LLM call failed: %s", esp_err_to_name(err));

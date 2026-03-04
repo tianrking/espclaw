@@ -179,6 +179,11 @@ typedef enum {
 #define CRON_CHECK_INTERVAL_MS   10000
 #define CRON_MAX_ENTRIES         16
 #define CRON_MAX_ACTION_LEN      256
+#define CRON_TASK_STACK_SIZE     4096
+#define CRON_TASK_PRIORITY       4
+#define NTP_SYNC_TIMEOUT_MS      10000
+#define DEFAULT_TIMEZONE_POSIX   "UTC0"
+#define TIMEZONE_MAX_LEN         64
 
 /* -----------------------------------------------------------------------
  * Factory Reset
@@ -207,9 +212,6 @@ typedef enum {
  * NTP
  * ----------------------------------------------------------------------- */
 #define NTP_SERVER               "pool.ntp.org"
-#define NTP_SYNC_TIMEOUT_MS      10000
-#define DEFAULT_TIMEZONE_POSIX   "UTC0"
-#define TIMEZONE_MAX_LEN         64
 
 /* -----------------------------------------------------------------------
  * Heartbeat (S3 only)

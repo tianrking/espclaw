@@ -105,12 +105,42 @@ ESPClaw 提供本地命令，直接执行无需调用 LLM：
 | 命令 | 说明 |
 |------|------|
 | `/help` | 显示可用命令 |
-| `/tools` | 列出已注册工具（7个） |
+| `/tools` | 列出已注册工具（14个） |
 | `/heap` | 显示剩余堆内存 |
 | `/gpio` | 显示允许的 GPIO 引脚范围 |
 | `/reset` | 软件重启 |
 
 其他输入会发送给 LLM 进行处理。
+
+## 功能特性
+
+### 内置工具（14个）
+
+| 分类 | 工具 |
+|------|------|
+| GPIO | `gpio_write`, `gpio_read`, `gpio_read_all` |
+| 内存 | `memory_set`, `memory_get`, `memory_delete` |
+| 定时 | `cron_schedule`, `cron_list`, `cron_cancel`, `cron_cancel_all` |
+| 时间 | `get_time`, `set_timezone` |
+| 系统 | `get_diagnostics` |
+
+### 定时任务
+
+ESPClaw 支持自然语言创建定时任务：
+
+```
+espclaw> 每15秒提醒我检查
+espclaw> 每天9点提醒我站起来
+espclaw> 30分钟后提醒我查看烤箱
+espclaw> 删除所有任务
+```
+
+**功能特点：**
+- 三种任务类型：周期、每日、一次性
+- 秒级精度（最小10秒）
+- 时区支持（UTC、Asia/Shanghai 等）
+- NTP 时间同步
+- NVS 持久化（重启后恢复）
 
 ## 开发计划
 

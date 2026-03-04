@@ -30,6 +30,8 @@
 #include "provider/provider.h"
 #include "agent/agent_loop.h"
 #include "hal/hal_gpio.h"
+#include "service/cron_service.h"
+#include "util/ratelimit.h"
 
 static const char *TAG = "espclaw";
 static message_bus_t s_bus;
@@ -53,6 +55,15 @@ void app_main(void)
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "NVS init failed: %s", esp_err_to_name(err));
         return;
+    }
+
+    /* 2.5 Rate limiter init */
+    ratelimit_init();
+
+    /* 2.6 Cron service init */
+    err = cron_init();
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Cron init failed: %s", esp_err_to_name(err));
     }
 
     /* 3. WiFi connect (non-fatal) */
@@ -82,6 +93,12 @@ void app_main(void)
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Agent start failed");
         return;
+    }
+
+    /* 6.5 Start cron service (needs agent queue for firing actions) */
+    err = cron_start(s_bus.inbound);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Cron service start failed: %s", esp_err_to_name(err));
     }
 
     /* 7. Start channels (serial CLI, later: Telegram, WebSocket) */

@@ -55,3 +55,50 @@ TOOL_ENTRY("get_diagnostics",
     "Get device health: free heap, uptime, chip info, allowed GPIO pins.",
     "{\"type\":\"object\",\"properties\":{}}",
     tool_system_diagnostics)
+
+/* Cron - scheduled tasks */
+TOOL_ENTRY("cron_schedule",
+    "Create a scheduled task. Types: periodic (every N seconds), daily (at specific time), once (after N seconds). Minimum interval: 10 seconds.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"type\":{\"type\":\"string\",\"enum\":[\"periodic\",\"daily\",\"once\"],"
+        "\"description\":\"Task type: periodic=repeat, daily=at specific time, once=one-time\"},"
+      "\"action\":{\"type\":\"string\",\"description\":\"What to do when triggered\"},"
+      "\"interval_seconds\":{\"type\":\"integer\",\"minimum\":10,\"description\":\"For periodic: repeat every N seconds (min 10)\"},"
+      "\"interval_minutes\":{\"type\":\"integer\",\"description\":\"For periodic: repeat every N minutes (converted to seconds)\"},"
+      "\"hour\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":23,\"description\":\"For daily: hour (0-23)\"},"
+      "\"minute\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":59,\"description\":\"For daily: minute (0-59)\"},"
+      "\"delay_seconds\":{\"type\":\"integer\",\"minimum\":10,\"description\":\"For once: trigger after N seconds (min 10)\"},"
+      "\"delay_minutes\":{\"type\":\"integer\",\"description\":\"For once: trigger after N minutes (converted to seconds)\"}},"
+    "\"required\":[\"type\",\"action\"]}",
+    tool_cron_schedule)
+
+TOOL_ENTRY("cron_list",
+    "List all scheduled tasks",
+    "{\"type\":\"object\",\"properties\":{}}",
+    tool_cron_list)
+
+TOOL_ENTRY("cron_cancel",
+    "Cancel a scheduled task by ID",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"id\":{\"type\":\"integer\",\"description\":\"Task ID to cancel\" } },"
+    "\"required\":[\"id\"]}",
+    tool_cron_cancel)
+
+TOOL_ENTRY("cron_cancel_all",
+    "Cancel ALL scheduled tasks at once",
+    "{\"type\":\"object\",\"properties\":{}}",
+    tool_cron_cancel_all)
+
+/* Time */
+TOOL_ENTRY("get_time",
+    "Get current time, timezone, and NTP sync status",
+    "{\"type\":\"object\",\"properties\":{}}",
+    tool_get_time)
+
+TOOL_ENTRY("set_timezone",
+    "Set timezone (e.g., UTC, Asia/Shanghai, America/New_York)",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"timezone\":{\"type\":\"string\",\"description\":\"Timezone name or POSIX format\"}"
+      "},\"required\":[\"timezone\"]}",
+    tool_set_timezone)
+

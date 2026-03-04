@@ -116,12 +116,42 @@ ESPClaw provides local commands that are handled immediately without calling the
 | Command | Description |
 |---------|-------------|
 | `/help` | Show available commands |
-| `/tools` | List registered tools (7 tools) |
+| `/tools` | List registered tools (14 tools) |
 | `/heap` | Show free heap memory |
 | `/gpio` | Show allowed GPIO pin range |
 | `/reset` | Software reset |
 
 Any other input is sent to the LLM agent for processing.
+
+## Features
+
+### Built-in Tools (14 total)
+
+| Category | Tools |
+|----------|-------|
+| GPIO | `gpio_write`, `gpio_read`, `gpio_read_all` |
+| Memory | `memory_set`, `memory_get`, `memory_delete` |
+| Cron | `cron_schedule`, `cron_list`, `cron_cancel`, `cron_cancel_all` |
+| Time | `get_time`, `set_timezone` |
+| System | `get_diagnostics` |
+
+### Scheduled Tasks
+
+ESPClaw supports natural language scheduling:
+
+```
+espclaw> remind me every 15 seconds to check
+espclaw> remind me every day at 9am to stand up
+espclaw> remind me in 30 minutes to check the oven
+espclaw> cancel all tasks
+```
+
+**Features:**
+- Periodic, daily, and one-time tasks
+- Second-level precision (minimum 10s)
+- Timezone support (UTC, Asia/Shanghai, etc.)
+- NTP time sync
+- NVS persistence (survives reboots)
 
 ## Development Plan
 
