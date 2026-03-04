@@ -118,11 +118,11 @@ ESPClaw 提供本地命令，直接执行无需调用 LLM：
 
 | 分类 | 工具 |
 |------|------|
-| GPIO | `gpio_write`, `gpio_read`, `gpio_read_all` |
-| 内存 | `memory_set`, `memory_get`, `memory_delete` |
-| 定时 | `cron_schedule`, `cron_list`, `cron_cancel`, `cron_cancel_all` |
-| 时间 | `get_time`, `set_timezone` |
-| 系统 | `get_diagnostics` |
+| GPIO | `gpio_write`, `gpio_read`, `gpio_read_all` (3个) |
+| 内存 | `memory_set`, `memory_get`, `memory_delete` (3个) |
+| 定时 | `cron_schedule`, `cron_list`, `cron_cancel`, `cron_cancel_all` (4个) |
+| 时间 | `get_time`, `set_timezone` (2个) |
+| 系统 | `get_diagnostics` (1个) |
 
 ### 定时任务
 
@@ -141,6 +141,159 @@ espclaw> 删除所有任务
 - 时区支持（UTC、Asia/Shanghai 等）
 - NTP 时间同步
 - NVS 持久化（重启后恢复）
+
+## 架构概述
+
+### 系统架构
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Channels (条件编译)                           │
+│  Serial │ Telegram │ DingTalk │ Discord │ Slack │ WeCom │ ...     │
+└─────────────────────────────┬───────────────────────────────────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │   Message Bus     │ FreeRTOS Queue
+                    │  inbound/outbound │
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │   Agent Loop      │ ReAct 循环
+                    │  ┌─────────────┐  │
+                    │  │  Session    │  │ 对话历史
+                    │  │  Context    │  │ 系统提示词
+                    │  └─────────────┘  │
+                    └─────────┬─────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+┌───────▼───────┐    ┌────────▼────────┐    ┌──────▼──────┐
+│    Provider   │    │  Tool Registry  │    │   Service   │
+│  ┌─────────┐  │    │  ┌───────────┐  │    │ ┌─────────┐ │
+│  │Anthropic│  │    │  │gpio_write │  │    │ │  cron   │ │
+│  │ OpenAI  │  │    │  │gpio_read  │  │    │ │ratelimit│ │
+│  │ Ollama  │  │    │  │memory_*   │  │    │ │bootguard│ │
+│  └─────────┘  │    │  │cron_*     │  │    │ │   ota   │ │
+└───────────────┘    │  │diagnostics│  │    │ └─────────┘ │
+                     │  └───────────┘  │    └─────────────┘
+                     └────────┬────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │       HAL         │ 安全护栏
+                    │  GPIO │ I2C │ PWM │
+                    └───────────────────┘
+```
+
+### 模块矩阵
+
+> **状态图例:** ✅ 已验证 | 🔄 开发中 | 📋 计划中
+
+| 分类 | 组件 | 文件 | 说明 |
+|------|------|------|------|
+| **Channels** | Serial | `channel_serial.c` | 串口控制台 ✅ 已验证 |
+| | Telegram | `channel_telegram.c` | Bot API (long polling) 🔄 开发中 |
+| | DingTalk | `channel_dingtalk.c` | 钉钉机器人 Webhook 🔄 开发中 |
+| | Discord | `channel_discord.c` | Discord Webhook 🔄 开发中 |
+| | Slack | `channel_slack.c` | Slack Incoming Webhook 🔄 开发中 |
+| | WeCom | `channel_wecom.c` | 企业微信群机器人 🔄 开发中 |
+| | Lark | `channel_lark.c` | 飞书机器人 (签名验证) 🔄 开发中 |
+| | Pushplus | `channel_pushplus.c` | 推送加服务 🔄 开发中 |
+| | Bark | `channel_bark.c` | iOS 推送通知 🔄 开发中 |
+| **Agent** | ReAct Loop | `agent/agent_loop.c` | 多轮工具调用循环 ✅ |
+| | Session | `agent/session.c` | 对话历史管理 ✅ |
+| | Context | `agent/context_builder.c` | 系统提示词组装 ✅ |
+| **Provider** | Anthropic | `provider_anthropic.c` | Messages API ✅ |
+| | OpenAI | `provider_openai.c` | Chat Completions API ✅ |
+| **Tools** | GPIO | `tool_gpio.c` | 3个工具: write/read/read_all ✅ |
+| | Memory | `tool_memory.c` | 3个工具: set/get/delete ✅ |
+| | Cron | `tool_cron.c` | 4个工具: schedule/list/cancel/cancel_all ✅ |
+| | Time | `tool_cron.c` | 2个工具: get_time/set_timezone ✅ |
+| | System | `tool_system.c` | 1个工具: diagnostics ✅ |
+| **Services** | Cron | `service/cron_service.c` | 定时任务调度器 ✅ |
+| | Rate Limit | `util/ratelimit.c` | API 调用限制 ✅ |
+| | WiFi | `manager/wifi_manager.c` | WiFi 连接管理 ✅ |
+| | NVS | `manager/nvs_manager.c` | 键值存储 ✅ |
+| **HAL** | GPIO | `hal/hal_gpio.c` | GPIO 安全护栏 ✅ |
+| **Util** | JSON | `util/json_util.c` | 轻量 JSON 解析 (无 cJSON) ✅ |
+| | HTTP | `util/http_client.c` | HTTPS 客户端封装 ✅ |
+
+### 工具详情 (共14个)
+
+| 工具名 | 参数 | 功能 |
+|--------|------|------|
+| `gpio_write` | `pin`, `state` | 设置 GPIO 高低电平 |
+| `gpio_read` | `pin` | 读取 GPIO 状态 |
+| `gpio_read_all` | - | 读取所有允许的 GPIO |
+| `memory_set` | `key`, `value` | 持久化存储 (NVS) |
+| `memory_get` | `key` | 读取存储的值 |
+| `memory_delete` | `key` | 删除存储的键 |
+| `cron_schedule` | `type`, `action`, `interval_seconds`/`hour`/`delay_seconds` | 创建定时任务 |
+| `cron_list` | - | 列出所有任务 |
+| `cron_cancel` | `id` | 取消指定任务 |
+| `cron_cancel_all` | - | 取消所有任务 |
+| `get_time` | - | 获取当前时间和 NTP 状态 |
+| `set_timezone` | `timezone` | 设置时区 |
+| `get_diagnostics` | - | 获取系统诊断信息 |
+
+### 文件结构
+
+```
+main/
+├── main.c                 # 入口点，初始化各模块
+├── CMakeLists.txt         # 构建配置
+├── config.h               # 编译时常量
+├── platform.h             # C3/S3/C5 条件编译宏
+├── messages.h             # 消息队列类型定义
+├── nvs_keys.h             # NVS 键名定义
+│
+├── agent/
+│   ├── agent_loop.c       # ReAct 循环
+│   ├── session.h/.c       # 对话历史
+│   └── context_builder.h/.c
+│
+├── channel/
+│   ├── channel.h          # Channel vtable 接口
+│   ├── channel_registry.c # 通道注册
+│   ├── channel_serial.c   # 串口通道
+│   ├── channel_telegram.c # Telegram Bot
+│   ├── channel_dingtalk.c # 钉钉
+│   ├── channel_discord.c  # Discord
+│   ├── channel_slack.c    # Slack
+│   ├── channel_wecom.c    # 企业微信
+│   ├── channel_lark.c     # 飞书
+│   ├── channel_pushplus.c # 推送加
+│   └── channel_bark.c     # iOS 推送
+│
+├── provider/
+│   ├── provider.h         # Provider vtable
+│   ├── provider_anthropic.c
+│   └── provider_openai.c
+│
+├── tool/
+│   ├── tool.h             # Tool 接口
+│   ├── tool_registry.c    # 工具注册 + 分发
+│   ├── builtin_tools.def  # X-macro 工具表
+│   ├── tool_gpio.c        # GPIO 工具
+│   ├── tool_memory.c      # 内存工具
+│   ├── tool_cron.c        # 定时任务工具
+│   └── tool_system.c      # 系统诊断
+│
+├── service/
+│   ├── cron_service.h/.c  # 定时任务服务
+│   └── (boot_guard.c)     # Step 9: 启动保护
+│
+├── manager/
+│   ├── wifi_manager.h/.c  # WiFi 管理
+│   └── nvs_manager.h/.c   # NVS 封装
+│
+├── hal/
+│   └── hal_gpio.h/.c      # GPIO HAL + 安全护栏
+│
+└── util/
+    ├── json_util.h/.c     # JSON 解析
+    ├── http_client.h/.c   # HTTP 客户端
+    └── ratelimit.h/.c     # 速率限制
+```
 
 ## 开发计划
 
