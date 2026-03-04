@@ -1,0 +1,57 @@
+/*
+ * ESPClaw - tool/builtin_tools.def
+ * X-macro tool table. Add new tools here in 3 steps:
+ *  1) Implement handler in tool_*.c with tool_execute_fn signature
+ *  2) Declare handler in tool_registry.c (static forward decl)
+ *  3) Add TOOL_ENTRY() line below
+ */
+
+/* GPIO */
+TOOL_ENTRY("gpio_write",
+    "Set a GPIO pin HIGH or LOW. Controls LEDs, relays, outputs.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"pin\":{\"type\":\"integer\",\"description\":\"GPIO pin (allowed range configured in firmware)\"},"
+      "\"state\":{\"type\":\"integer\",\"description\":\"0=LOW, 1=HIGH\"}},"
+    "\"required\":[\"pin\",\"state\"]}",
+    tool_gpio_write)
+
+TOOL_ENTRY("gpio_read",
+    "Read current state of a GPIO pin. Returns HIGH or LOW.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"pin\":{\"type\":\"integer\",\"description\":\"GPIO pin to read\"}},"
+    "\"required\":[\"pin\"]}",
+    tool_gpio_read)
+
+TOOL_ENTRY("gpio_read_all",
+    "Read all allowed GPIO pin states in one call.",
+    "{\"type\":\"object\",\"properties\":{}}",
+    tool_gpio_read_all)
+
+/* Persistent memory */
+TOOL_ENTRY("memory_set",
+    "Store a value in persistent NVS memory. Key must start with u_.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"key\":{\"type\":\"string\",\"description\":\"Key (max 15 chars, must start with u_)\"},"
+      "\"value\":{\"type\":\"string\",\"description\":\"Value to store\"}},"
+    "\"required\":[\"key\",\"value\"]}",
+    tool_memory_set)
+
+TOOL_ENTRY("memory_get",
+    "Retrieve a value from persistent NVS memory. Key must start with u_.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"key\":{\"type\":\"string\",\"description\":\"Key to retrieve (must start with u_)\"}},"
+    "\"required\":[\"key\"]}",
+    tool_memory_get)
+
+TOOL_ENTRY("memory_delete",
+    "Delete a key from persistent NVS memory. Key must start with u_.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"key\":{\"type\":\"string\",\"description\":\"Key to delete (must start with u_)\"}},"
+    "\"required\":[\"key\"]}",
+    tool_memory_delete)
+
+/* System diagnostics */
+TOOL_ENTRY("get_diagnostics",
+    "Get device health: free heap, uptime, chip info, allowed GPIO pins.",
+    "{\"type\":\"object\",\"properties\":{}}",
+    tool_system_diagnostics)

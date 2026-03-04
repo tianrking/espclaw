@@ -5,6 +5,7 @@
  */
 #include "provider.h"
 #include "config.h"
+#include "tool/tool_registry.h"
 #include "esp_http_client.h"
 #include "esp_log.h"
 #include "esp_crt_bundle.h"
@@ -39,9 +40,12 @@ static esp_err_t http_event_handler(esp_http_client_event_t *evt)
 /* Extract from: {"choices":[{"message":{"content":"..."}}]} */
 static void extract_content(const char *json, char *out, size_t out_sz)
 {
+    /* Skip null content (tool_calls response has "content":null) */
     const char *key = strstr(json, "\"content\":\"");
     if (!key) {
+        /* Check for tool_calls — caller handles this case via finish_reason */
         strncpy(out, "[no content in response]", out_sz - 1);
+        out[out_sz - 1] = '\0';
         return;
     }
     const char *start = key + strlen("\"content\":\"");
@@ -60,6 +64,75 @@ static void extract_content(const char *json, char *out, size_t out_sz)
         }
     }
     out[pos] = '\0';
+}
+
+/*
+ * Convert OpenAI tool_calls format to Anthropic-like format that
+ * agent_loop's try_dispatch_tool() can parse.
+ *
+ * OpenAI response (finish_reason=tool_calls):
+ *   {"choices":[{"message":{"tool_calls":[{"id":"call_xxx","function":
+ *     {"name":"gpio_write","arguments":"{\"pin\":2,\"state\":1}"}}]}}]}
+ *
+ * We synthesize a string containing stop_reason=tool_use + id + name + input
+ * so agent_loop can reuse the same parsing code.
+ */
+static void extract_tool_call(const char *json, char *out, size_t out_sz)
+{
+    /* Extract tool call id */
+    char tool_id[64] = "unknown_id";
+    const char *id_key = strstr(json, "\"id\":\"");
+    if (id_key) {
+        id_key += strlen("\"id\":\"");  /* skip "id":" and point to value start */
+        size_t i = 0;
+        while (*id_key && *id_key != '"' && i < sizeof(tool_id) - 1)
+            tool_id[i++] = *id_key++;
+        tool_id[i] = '\0';
+    }
+
+    /* Extract function name */
+    char func_name[64] = "";
+    const char *name_key = strstr(json, "\"name\":\"");
+    if (name_key) {
+        const char *start = name_key + strlen("\"name\":\"");
+        size_t i = 0;
+        while (*start && *start != '"' && i < sizeof(func_name) - 1)
+            func_name[i++] = *start++;
+        func_name[i] = '\0';
+    }
+
+    /* Extract arguments (already a JSON string, need to unescape) */
+    char args[512] = "{}";
+    const char *args_key = strstr(json, "\"arguments\":\"");
+    if (args_key) {
+        const char *start = args_key + strlen("\"arguments\":\"");
+        size_t i = 0;
+        while (*start && i < sizeof(args) - 1) {
+            if (start[0] == '\\' && start[1] == '"') {
+                args[i++] = '"'; start += 2;
+            } else if (start[0] == '\\' && start[1] == '\\') {
+                args[i++] = '\\'; start += 2;
+            } else if (start[0] == '\\' && start[1] == 'n') {
+                args[i++] = '\n'; start += 2;
+            } else if (start[0] == '"') {
+                break;
+            } else {
+                args[i++] = *start++;
+            }
+        }
+        args[i] = '\0';
+    }
+
+    /*
+     * Synthesize a string that try_dispatch_tool() can parse:
+     * contains "stop_reason":"tool_use", "id", "name", "input"
+     */
+    snprintf(out, out_sz,
+             "{\"stop_reason\":\"tool_use\","
+             "\"id\":\"%s\","
+             "\"name\":\"%s\","
+             "\"input\":%s}",
+             tool_id, func_name, args[0] ? args : "{}");
 }
 
 static char s_api_key[LLM_API_KEY_BUF_SIZE];
@@ -95,8 +168,23 @@ static esp_err_t openai_complete(
         s_model, LLM_MAX_TOKENS);
 
     if (system_prompt && strlen(system_prompt) > 0) {
+        /* JSON-escape the system prompt */
         len += snprintf(body + len, LLM_REQUEST_BUF_SIZE - len,
-            "{\"role\":\"system\",\"content\":\"%s\"},", system_prompt);
+                        "{\"role\":\"system\",\"content\":\"");
+        const char *sp = system_prompt;
+        while (*sp && len < LLM_REQUEST_BUF_SIZE - 2) {
+            unsigned char c = (unsigned char)*sp++;
+            if      (c == '"')  { body[len++] = '\\'; body[len++] = '"';  }
+            else if (c == '\\') { body[len++] = '\\'; body[len++] = '\\'; }
+            else if (c == '\n') { body[len++] = '\\'; body[len++] = 'n';  }
+            else if (c == '\r') { body[len++] = '\\'; body[len++] = 'r';  }
+            else if (c == '\t') { body[len++] = '\\'; body[len++] = 't';  }
+            else                { body[len++] = (char)c; }
+        }
+        body[len++] = '"';
+        body[len++] = '}';
+        body[len++] = ',';
+        body[len]   = '\0';
     }
 
     /* Append user messages (strip outer brackets from messages_json) */
@@ -110,8 +198,21 @@ static esp_err_t openai_complete(
         }
     }
 
-    /* Close messages array and object */
-    len += snprintf(body + len, LLM_REQUEST_BUF_SIZE - len, "]}");
+    /* Close messages array */
+    len += snprintf(body + len, LLM_REQUEST_BUF_SIZE - len, "]");
+
+    /* Build OpenAI-format tools JSON inline (ignoring tools_json arg which is Anthropic format) */
+    char *oai_tools = malloc(LLM_REQUEST_BUF_SIZE / 2);
+    if (oai_tools) {
+        int tlen = tool_registry_build_tools_json_openai(oai_tools, LLM_REQUEST_BUF_SIZE / 2);
+        if (tlen > 2) {
+            len += snprintf(body + len, LLM_REQUEST_BUF_SIZE - len,
+                ",\"tools\":%s", oai_tools);
+        }
+        free(oai_tools);
+    }
+
+    len += snprintf(body + len, LLM_REQUEST_BUF_SIZE - len, "}");
 
     char *resp = malloc(LLM_RESPONSE_BUF_SIZE);
     if (!resp) { free(body); return ESP_ERR_NO_MEM; }
@@ -153,6 +254,21 @@ static esp_err_t openai_complete(
     }
 
     extract_content(resp, response_buf, response_sz);
+
+    /*
+     * Step 6: detect tool_calls finish_reason (OpenAI format).
+     * If found, synthesize Anthropic-like JSON so agent_loop can
+     * reuse the same try_dispatch_tool() parsing code.
+     */
+    if (strstr(resp, "\"finish_reason\":\"tool_calls\"") ||
+        strstr(resp, "\"tool_calls\":[")) {
+        extract_tool_call(resp, response_buf, response_sz);
+        ESP_LOGI(TAG, "tool_calls detected");
+    } else {
+        extract_content(resp, response_buf, response_sz);
+        ESP_LOGI(TAG, "Got %d chars", (int)strlen(response_buf));
+    }
+
     free(resp);
     return ESP_OK;
 }

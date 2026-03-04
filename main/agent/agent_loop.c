@@ -1,20 +1,23 @@
 /*
  * ESPClaw - agent/agent_loop.c
  *
- * Step 4: single-turn LLM chat, no tool dispatch yet.
+ * Step 6: ReAct Agent Loop — real tool dispatch
  *
- * Flow:
- *   inbound_msg_t  →  build messages JSON  →  provider->complete()
- *                  →  outbound_msg_t back to same channel
- *
- * History: last MAX_HISTORY_TURNS turns kept in a circular ring.
+ * Changes from Step 5:
+ *   - Include tool_registry: build tools JSON, dispatch tool_use calls
+ *   - Parse Anthropic tool_use block: extract name, tool_use_id, input
+ *   - Pass tools_json to provider->complete()
  */
 #include "agent_loop.h"
+#include "session.h"
+#include "context_builder.h"
+#include "tool/tool_registry.h"
 #include "provider/provider.h"
 #include "bus/message_bus.h"
 #include "messages.h"
 #include "config.h"
 #include "platform.h"
+#include "util/json_util.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -22,81 +25,86 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static const char *TAG        = "agent";
-static message_bus_t *s_bus  = NULL;
+static const char *TAG       = "agent";
+static message_bus_t *s_bus = NULL;
 
-/* Conversation history ring buffer */
-static conversation_msg_t s_history[MAX_HISTORY_TURNS];
-static int s_history_count = 0;
-static int s_history_head  = 0;  /* oldest entry index */
+/* Per-task state (one agent task only) */
+static session_t s_session;
 
-static void history_append(const char *role, const char *content)
+/* -----------------------------------------------------------------------
+ * Parse Anthropic tool_use block and dispatch to tool_registry.
+ *
+ * Anthropic raw response (when stop_reason=tool_use):
+ *   {"content":[...,{"type":"tool_use","id":"toolu_xxx","name":"gpio_write",
+ *                    "input":{"pin":2,"state":1}}],"stop_reason":"tool_use"}
+ *
+ * Returns true if a tool_use was detected, dispatched, and result written.
+ * ----------------------------------------------------------------------- */
+static bool try_dispatch_tool(const char *reply,
+                               char       *tool_id_out,  size_t tool_id_sz,
+                               char       *tool_name_out,size_t tool_name_sz,
+                               char       *input_out,    size_t input_sz,
+                               char       *result_buf,   size_t result_sz)
 {
-    int idx;
-    if (s_history_count < MAX_HISTORY_TURNS) {
-        idx = s_history_count++;
-    } else {
-        /* Overwrite oldest */
-        idx = s_history_head;
-        s_history_head = (s_history_head + 1) % MAX_HISTORY_TURNS;
-    }
-    strncpy(s_history[idx].role,    role,    sizeof(s_history[idx].role)    - 1);
-    strncpy(s_history[idx].content, content, sizeof(s_history[idx].content) - 1);
-    s_history[idx].role[sizeof(s_history[idx].role) - 1]       = '\0';
-    s_history[idx].content[sizeof(s_history[idx].content) - 1] = '\0';
-}
+    if (!strstr(reply, "\"stop_reason\":\"tool_use\"")) return false;
 
-/* Build JSON array: [{"role":"user","content":"..."},{"role":"assistant",...}] */
-static void build_messages_json(char *out, size_t out_sz)
-{
-    size_t pos = 0;
-    out[pos++] = '[';
-
-    for (int i = 0; i < s_history_count; i++) {
-        int idx = (s_history_head + i) % MAX_HISTORY_TURNS;
-        const conversation_msg_t *m = &s_history[idx];
-
-        /* Estimate worst-case: role(16) + content escaped (~2x) + overhead */
-        int written = snprintf(out + pos, out_sz - pos - 2,
-            "%s{\"role\":\"%s\",\"content\":\"",
-            i > 0 ? "," : "", m->role);
-        if (written <= 0) break;
-        pos += written;
-
-        /* Escape content */
-        for (const char *c = m->content; *c && pos < out_sz - 4; c++) {
-            if (*c == '"')       { out[pos++] = '\\'; out[pos++] = '"'; }
-            else if (*c == '\\') { out[pos++] = '\\'; out[pos++] = '\\'; }
-            else if (*c == '\n') { out[pos++] = '\\'; out[pos++] = 'n'; }
-            else                 { out[pos++] = *c; }
-        }
-
-        if (pos + 3 < out_sz) {
-            out[pos++] = '"';
-            out[pos++] = '}';
-        }
+    /* Extract tool id */
+    if (!json_get_str(reply, "id", tool_id_out, tool_id_sz)) {
+        strncpy(tool_id_out, "unknown_id", tool_id_sz - 1);
     }
 
-    if (pos < out_sz) out[pos++] = ']';
-    out[pos] = '\0';
+    /* Extract tool name */
+    if (!json_get_str(reply, "name", tool_name_out, tool_name_sz)) {
+        snprintf(result_buf, result_sz, "Error: could not parse tool name");
+        return true; /* still a tool_use, just broken */
+    }
+
+    /* Extract input object (raw JSON) */
+    const char *input_obj = json_get_object(reply, "input");
+    const char *input_json = input_obj ? input_obj : "{}";
+
+    /* Copy input JSON for caller to store in session */
+    strncpy(input_out, input_json, input_sz - 1);
+    input_out[input_sz - 1] = '\0';
+
+    tool_registry_dispatch(tool_name_out, input_json, result_buf, result_sz);
+    return true;
 }
 
+/* -----------------------------------------------------------------------
+ * Agent task
+ * ----------------------------------------------------------------------- */
 static void agent_task(void *arg)
 {
     inbound_msg_t  in;
     outbound_msg_t out;
 
-    char *msgs_json  = malloc(LLM_REQUEST_BUF_SIZE);
-    char *reply      = malloc(CHANNEL_TX_BUF_SIZE);
+    char *msgs_json   = ESPCLAW_MALLOC(LLM_REQUEST_BUF_SIZE);
+    char *tools_json  = ESPCLAW_MALLOC(LLM_REQUEST_BUF_SIZE / 2);
+    char *reply       = ESPCLAW_MALLOC(LLM_RESPONSE_BUF_SIZE);
+    char *sys_prompt  = ESPCLAW_MALLOC(SYSTEM_PROMPT_BUF_SIZE);
+    char *tool_id     = malloc(64);
+    char *tool_name   = malloc(32);
+    char *tool_input  = malloc(256);
+    char *tool_result = malloc(TOOL_RESULT_BUF_SIZE);
 
-    if (!msgs_json || !reply) {
+    if (!msgs_json || !tools_json || !reply || !sys_prompt ||
+        !tool_id   || !tool_name || !tool_input || !tool_result) {
         ESP_LOGE(TAG, "OOM at startup");
-        free(msgs_json); free(reply);
-        vTaskDelete(NULL);
-        return;
+        goto done;
     }
 
-    ESP_LOGI(TAG, "Agent ready (history=%d turns)", MAX_HISTORY_TURNS);
+    session_init(&s_session);
+    tool_registry_init();
+
+    /* Build tools JSON once (static table, doesn't change at runtime) */
+    if (tool_registry_build_tools_json(tools_json, LLM_REQUEST_BUF_SIZE / 2) < 0) {
+        ESP_LOGW(TAG, "tools JSON truncated");
+        tools_json[0] = '\0';
+    }
+
+    ESP_LOGI(TAG, "ReAct agent ready (%d tools, history=%d, max_rounds=%d)",
+             tool_registry_count(), MAX_HISTORY_TURNS, MAX_TOOL_ROUNDS);
 
     while (1) {
         if (xQueueReceive(s_bus->inbound, &in, portMAX_DELAY) != pdTRUE)
@@ -112,27 +120,63 @@ static void agent_task(void *arg)
             continue;
         }
 
-        /* Add user turn to history */
-        history_append("user", in.text);
+        /* 1. Add user turn */
+        session_append(&s_session, "user", in.text);
 
-        /* Build messages JSON */
-        build_messages_json(msgs_json, LLM_REQUEST_BUF_SIZE);
+        /* 2. Build system prompt */
+        context_build_system_prompt(sys_prompt, SYSTEM_PROMPT_BUF_SIZE, NULL);
 
-        /* Call LLM */
-        ESP_LOGI(TAG, "→ LLM (%d chars)", (int)strlen(msgs_json));
-        esp_err_t err = llm->complete(
-            "You are ESPClaw, an embedded AI assistant by Seeed Studio running on an ESP32 microcontroller. You are concise, technical, and helpful.",
-            msgs_json, NULL,
-            reply, CHANNEL_TX_BUF_SIZE);
+        /* 3. ReAct loop */
+        bool got_reply = false;
+        for (int round = 0; round < MAX_TOOL_ROUNDS; round++) {
 
-        if (err != ESP_OK) {
-            snprintf(out.text, sizeof(out.text), "[error] LLM call failed: %s",
-                     esp_err_to_name(err));
-        } else {
-            /* Add assistant turn to history */
-            history_append("assistant", reply);
+            /* Choose message format based on provider type */
+            bool use_openai_format = (llm->name &&
+                (strcmp(llm->name, "openai") == 0 ||
+                 strcmp(llm->name, "openrouter") == 0 ||
+                 strcmp(llm->name, "ollama") == 0));
+
+            int jlen = use_openai_format
+                ? session_build_messages_json_openai(&s_session, msgs_json, LLM_REQUEST_BUF_SIZE)
+                : session_build_messages_json(&s_session, msgs_json, LLM_REQUEST_BUF_SIZE);
+            if (jlen < 0) ESP_LOGW(TAG, "messages JSON truncated");
+
+            ESP_LOGI(TAG, "-> LLM round %d (%d chars)", round,
+                     jlen > 0 ? jlen : 0);
+
+            esp_err_t err = llm->complete(sys_prompt, msgs_json, tools_json,
+                                          reply, LLM_RESPONSE_BUF_SIZE);
+            if (err != ESP_OK) {
+                snprintf(out.text, sizeof(out.text),
+                         "[error] LLM call failed: %s", esp_err_to_name(err));
+                got_reply = true;
+                break;
+            }
+
+            /* 4. Tool dispatch? */
+            tool_id[0] = tool_name[0] = tool_input[0] = tool_result[0] = '\0';
+            if (try_dispatch_tool(reply,
+                                   tool_id,    64,
+                                   tool_name,  32,
+                                   tool_input, 256,
+                                   tool_result, TOOL_RESULT_BUF_SIZE)) {
+                session_append_tool_use(&s_session, tool_id, tool_name, tool_input);
+                session_append_tool_result(&s_session, tool_id, tool_result);
+                ESP_LOGI(TAG, "Tool: %s(%s) -> %s", tool_name, tool_input, tool_result);
+                continue;
+            }
+
+            /* 5. Plain text reply — done */
+            session_append(&s_session, "assistant", reply);
             strncpy(out.text, reply, sizeof(out.text) - 1);
             out.text[sizeof(out.text) - 1] = '\0';
+            got_reply = true;
+            break;
+        }
+
+        if (!got_reply) {
+            snprintf(out.text, sizeof(out.text),
+                     "[error] Max tool rounds (%d) exceeded.", MAX_TOOL_ROUNDS);
         }
 
         out.target  = in.source;
@@ -140,9 +184,16 @@ static void agent_task(void *arg)
         message_bus_post_outbound(s_bus, &out, pdMS_TO_TICKS(200));
     }
 
-    /* unreachable */
-    free(msgs_json);
-    free(reply);
+done:
+    ESPCLAW_FREE(msgs_json);
+    ESPCLAW_FREE(tools_json);
+    ESPCLAW_FREE(reply);
+    ESPCLAW_FREE(sys_prompt);
+    free(tool_id);
+    free(tool_name);
+    free(tool_input);
+    free(tool_result);
+    vTaskDelete(NULL);
 }
 
 esp_err_t agent_start(message_bus_t *bus)

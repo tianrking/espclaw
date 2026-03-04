@@ -109,8 +109,26 @@ static esp_err_t anthropic_complete(
         s_model, LLM_MAX_TOKENS);
 
     if (system_prompt && strlen(system_prompt) > 0) {
+        /* JSON-escape the system prompt (may contain quotes/newlines from heap info) */
+        len += snprintf(body + len, LLM_REQUEST_BUF_SIZE - len, ",\"system\":\"");
+        const char *sp = system_prompt;
+        while (*sp && len < LLM_REQUEST_BUF_SIZE - 2) {
+            unsigned char c = (unsigned char)*sp++;
+            if      (c == '"')  { body[len++] = '\\'; body[len++] = '"';  }
+            else if (c == '\\') { body[len++] = '\\'; body[len++] = '\\'; }
+            else if (c == '\n') { body[len++] = '\\'; body[len++] = 'n';  }
+            else if (c == '\r') { body[len++] = '\\'; body[len++] = 'r';  }
+            else if (c == '\t') { body[len++] = '\\'; body[len++] = 't';  }
+            else                { body[len++] = (char)c; }
+        }
+        body[len++] = '"';
+        body[len]   = '\0';
+    }
+
+    /* Step 6: include tools array when provided */
+    if (tools_json && tools_json[0] != '\0' && strlen(tools_json) > 2) {
         len += snprintf(body + len, LLM_REQUEST_BUF_SIZE - len,
-            ",\"system\":\"%s\"", system_prompt);
+            ",\"tools\":%s", tools_json);
     }
 
     len += snprintf(body + len, LLM_REQUEST_BUF_SIZE - len,
@@ -166,10 +184,20 @@ static esp_err_t anthropic_complete(
         ESP_LOGW(TAG, "Response buffer truncated");
     }
 
-    extract_text(resp, response_buf, response_sz);
+    /*
+     * Step 6: if stop_reason=tool_use, copy raw JSON into response_buf
+     * so agent_loop can parse tool_id / tool_name / input.
+     * Otherwise extract plain text as before.
+     */
+    if (strstr(resp, "\"stop_reason\":\"tool_use\"")) {
+        strncpy(response_buf, resp, response_sz - 1);
+        response_buf[response_sz - 1] = '\0';
+        ESP_LOGI(TAG, "tool_use detected");
+    } else {
+        extract_text(resp, response_buf, response_sz);
+        ESP_LOGI(TAG, "Got %d chars", (int)strlen(response_buf));
+    }
     free(resp);
-
-    ESP_LOGI(TAG, "Got %d chars", (int)strlen(response_buf));
     return ESP_OK;
 }
 

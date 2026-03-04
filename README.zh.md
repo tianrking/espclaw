@@ -13,6 +13,12 @@
 
 <video src="https://github.com/tianrking/espclaw/raw/main/media/esp32c5.mp4" width="100%" controls></video>
 
+### 持久记忆
+
+ESPClaw 通过 NVS 存储在重启后仍能记住用户偏好：
+
+<img src="media/memory.png" width="80%" alt="Memory demo - LLM 记住用户名">
+
 ## 支持的目标芯片
 
 | 目标 | 核心数 | PSRAM | Flash | 配置档 |

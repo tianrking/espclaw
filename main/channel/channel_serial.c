@@ -2,15 +2,22 @@
  * ESPClaw - channel/channel_serial.c
  * Serial CLI channel — interactive shell via USB serial.
  *
- * Input task: reads lines from serial → posts to inbound queue
+ * Input task: reads lines, handles local /commands, posts to inbound queue
  * Output task: reads from outbound queue → prints to serial
- * Echo task (Step 3): temporarily echoes inbound → outbound for testing
+ *
+ * Local commands (not sent to LLM):
+ *   /help  — show this list
+ *   /tools — list registered tools
+ *   /heap  — current free heap
+ *   /reset — software reset
  */
 #include "channel/channel.h"
 #include "bus/message_bus.h"
 #include "messages.h"
 #include "config.h"
 #include "platform.h"
+#include "tool/tool_registry.h"
+#include "hal/hal_gpio.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
@@ -33,6 +40,57 @@ static void serial_init_usb_jtag(void)
     ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&cfg));
     usb_serial_jtag_vfs_register();
     ESP_LOGI(TAG, "USB Serial JTAG VFS driver installed");
+}
+
+/* -----------------------------------------------------------------------
+ * Local command handler — returns true if command was handled locally
+ * (caller should NOT forward to LLM queue)
+ * ----------------------------------------------------------------------- */
+static bool serial_handle_local_cmd(const char *line)
+{
+    if (strcmp(line, "/help") == 0) {
+        printf("ESPClaw local commands:\n"
+               "  /help  - show this help\n"
+               "  /tools - list registered tools (callable by LLM)\n"
+               "  /heap  - show free heap memory\n"
+               "  /gpio  - show allowed GPIO pin range\n"
+               "  /reset - software reset\n"
+               "Anything else is sent to the LLM agent.\n");
+        return true;
+    }
+
+    if (strcmp(line, "/tools") == 0) {
+        int n = tool_registry_count();
+        printf("%d tools registered:\n", n);
+        /* Re-use registry list via init log — simplest approach is to
+         * call init again; it only prints, doesn't allocate */
+        tool_registry_init();
+        printf("Ask the LLM: \"what tools do you have?\" for descriptions.\n");
+        return true;
+    }
+
+    if (strcmp(line, "/heap") == 0) {
+        printf("Free heap: %lu bytes\n", (unsigned long)esp_get_free_heap_size());
+        return true;
+    }
+
+    if (strcmp(line, "/gpio") == 0) {
+        char pins[64] = {0};
+        hal_gpio_allowed_pins_str(pins, sizeof(pins));
+        printf("GPIO allowed pins: [%s] (range %d-%d)\n",
+               pins[0] ? pins : "none", GPIO_MIN_PIN, GPIO_MAX_PIN);
+        return true;
+    }
+
+    if (strcmp(line, "/reset") == 0) {
+        printf("Resetting...\n");
+        fflush(stdout);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        esp_restart();
+        return true;
+    }
+
+    return false; /* not a local command */
 }
 
 /* -----------------------------------------------------------------------
@@ -62,12 +120,18 @@ static void serial_input_task(void *arg)
                 line[pos] = '\0';
                 printf("\n");
 
-                /* Post to inbound queue */
-                inbound_msg_t msg = {0};
-                strncpy(msg.text, line, sizeof(msg.text) - 1);
-                msg.source = MSG_SOURCE_SERIAL;
-                msg.chat_id = 0;
-                message_bus_post_inbound(s_bus, &msg, pdMS_TO_TICKS(100));
+                /* Check for local /commands first */
+                if (serial_handle_local_cmd(line)) {
+                    printf("espclaw> ");
+                    fflush(stdout);
+                } else {
+                    /* Forward to agent via inbound queue */
+                    inbound_msg_t msg = {0};
+                    strncpy(msg.text, line, sizeof(msg.text) - 1);
+                    msg.source = MSG_SOURCE_SERIAL;
+                    msg.chat_id = 0;
+                    message_bus_post_inbound(s_bus, &msg, pdMS_TO_TICKS(100));
+                }
 
                 pos = 0;
             } else {
@@ -119,7 +183,6 @@ static esp_err_t serial_start(message_bus_t *bus)
                 NULL, CHANNEL_TASK_PRIORITY, NULL);
     xTaskCreate(serial_output_task, "ser_out", CHANNEL_TASK_STACK_SIZE,
                 NULL, CHANNEL_TASK_PRIORITY, NULL);
-    /* echo_agent_task removed in Step 4 — real agent_loop handles responses */
 
     ESP_LOGI(TAG, "Serial CLI started");
     return ESP_OK;
@@ -135,3 +198,4 @@ const channel_ops_t serial_channel_ops = {
     .start = serial_start,
     .is_available = serial_is_available,
 };
+

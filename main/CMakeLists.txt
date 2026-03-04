@@ -16,6 +16,13 @@ set(SRCS
     "provider/provider_openai.c"
     # Step 4: Agent loop
     "agent/agent_loop.c"
+    # Step 5: ReAct agent modules
+    "agent/session.c"
+    "agent/context_builder.c"
+    # Step 6: Tool system
+    "util/json_util.c"
+    "hal/hal_gpio.c"
+    "tool/tool_registry.c"
 )
 
 idf_component_register(

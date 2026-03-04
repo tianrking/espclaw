@@ -18,9 +18,9 @@ ESP-IDF 5.5 纯 C AI 助手固件，主攻 ESP32-C3，兼容 ESP32-S3。
 - [x] Step 2 — WiFi 连接 (已验证，注意 WPA 版本兼容性)
 - [x] Step 3 — 串口交互 (已验证，C5 上运行正常)
 - [x] Step 4 — LLM 对话 (已验证，支持 Anthropic / OpenAI 兼容接口)
-- [ ] Step 5 — ReAct Agent ← 当前
-- [ ] Step 6 — 工具系统
-- [ ] Step 7 — Telegram
+- [x] Step 5 — ReAct Agent (已验证，多轮对话 + 历史记录)
+- [x] Step 6 — 工具系统 (已验证，GPIO + Memory + 7个工具)
+- [ ] Step 7 — Telegram ← 当前
 - [ ] Step 8 — 生产就绪
 - [ ] Step 9 — S3 全功能
 - [ ] Step 10 — 完整功能集
@@ -122,7 +122,7 @@ idf.py build flash monitor
 
 ---
 
-## Step 5: ReAct Agent
+## Step 5: ReAct Agent ✅
 
 **新增文件:**
 - `agent/agent_loop.h` + `.c` — ReAct 循环主逻辑
@@ -137,7 +137,7 @@ idf.py build flash monitor
 3. ReAct 循环：检测 tool_use → 执行 → 返回结果 → 再次调用 LLM
 4. 多轮对话上下文保持
 
-**验证:**
+**验证:** ✅ 已通过
 ```
 # 串口输入: hi
 # 串口输出: Hello! How can I help?
@@ -148,7 +148,7 @@ idf.py build flash monitor
 
 ---
 
-## Step 6: 工具系统
+## Step 6: 工具系统 ✅
 
 **新增文件:**
 - `tool/tool.h` — Tool 接口 + 能力位掩码
@@ -169,7 +169,16 @@ idf.py build flash monitor
 4. LLM 可调用 get_diagnostics 查看设备状态
 5. GPIO 安全护栏：只允许 Kconfig 配置范围内的引脚
 
-**验证:**
+**已注册工具 (7个):**
+- `gpio_write` — 设置 GPIO 电平
+- `gpio_read` — 读取 GPIO 电平
+- `gpio_read_all` — 读取所有允许的 GPIO 状态
+- `memory_set` — 持久存储键值对 (key 必须以 `u_` 开头)
+- `memory_get` — 读取存储的值
+- `memory_delete` — 删除存储的值
+- `get_diagnostics` — 获取设备诊断信息
+
+**验证:** ✅ 已通过
 ```
 # 串口输入: turn on GPIO 2
 # 实际效果: GPIO2 变高电平（万用表量）

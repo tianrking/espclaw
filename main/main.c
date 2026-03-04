@@ -1,13 +1,14 @@
 /*
- * ESPClaw - main.c (Step 4: LLM dialogue)
+ * ESPClaw - main.c (Step 6: tool system)
  *
  * What this does:
  *   1. Print banner
  *   2. Init NVS
  *   3. Connect WiFi
  *   4. Init LLM provider (from NVS/menuconfig)
- *   5. Init message bus + start serial channel
- *   6. Start agent loop (reads inbound, calls LLM, writes outbound)
+ *   5. Init GPIO HAL
+ *   6. Init message bus + start serial channel
+ *   7. Start agent loop (ReAct: calls LLM, dispatches tools, loops)
  *
  * Verify: idf.py build flash monitor
  * Try typing:
@@ -28,6 +29,7 @@
 #include "channel/channel.h"
 #include "provider/provider.h"
 #include "agent/agent_loop.h"
+#include "hal/hal_gpio.h"
 
 static const char *TAG = "espclaw";
 static message_bus_t s_bus;
@@ -65,7 +67,10 @@ void app_main(void)
         ESP_LOGW(TAG, "LLM not configured — set API key via menuconfig or provision.sh");
     }
 
-    /* 5. Message bus */
+    /* 5. GPIO HAL */
+    hal_gpio_init();
+
+    /* 6. Message bus */
     err = message_bus_init(&s_bus);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Message bus init failed");
