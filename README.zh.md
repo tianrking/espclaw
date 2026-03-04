@@ -98,6 +98,20 @@ scripts/provision.sh \
   --llm-model "gpt-4o-mini"
 ```
 
+## 串口命令
+
+ESPClaw 提供本地命令，直接执行无需调用 LLM：
+
+| 命令 | 说明 |
+|------|------|
+| `/help` | 显示可用命令 |
+| `/tools` | 列出已注册工具（7个） |
+| `/heap` | 显示剩余堆内存 |
+| `/gpio` | 显示允许的 GPIO 引脚范围 |
+| `/reset` | 软件重启 |
+
+其他输入会发送给 LLM 进行处理。
+
 ## 开发计划
 
 详见 [PLAN.md](PLAN.md)，包含完整的增量开发步骤路线图。

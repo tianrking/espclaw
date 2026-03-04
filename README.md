@@ -109,6 +109,20 @@ scripts/provision.sh \
   --llm-model "gpt-4o-mini"
 ```
 
+## Serial CLI
+
+ESPClaw provides local commands that are handled immediately without calling the LLM:
+
+| Command | Description |
+|---------|-------------|
+| `/help` | Show available commands |
+| `/tools` | List registered tools (7 tools) |
+| `/heap` | Show free heap memory |
+| `/gpio` | Show allowed GPIO pin range |
+| `/reset` | Software reset |
+
+Any other input is sent to the LLM agent for processing.
+
 ## Development Plan
 
 See [PLAN.md](PLAN.md) for the incremental step-by-step roadmap.
