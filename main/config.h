@@ -8,6 +8,11 @@
 #include "platform.h"
 
 /* -----------------------------------------------------------------------
+ * Firmware Version
+ * ----------------------------------------------------------------------- */
+#define ESPCLAW_VERSION         "1.0.0"
+
+/* -----------------------------------------------------------------------
  * Buffer Sizes (platform-dependent)
  * ----------------------------------------------------------------------- */
 #if ESPCLAW_HAS_PSRAM
@@ -23,7 +28,7 @@
   #define SESSION_HISTORY_SIZE     32768   /* 32KB session .jsonl */
 #else
   /* C3: tight buffers, all from internal SRAM */
-  #define LLM_REQUEST_BUF_SIZE     12288   /* 12KB */
+  #define LLM_REQUEST_BUF_SIZE     16384   /* 16KB - need extra space for 31+ tools */
   #define LLM_RESPONSE_BUF_SIZE    16384   /* 16KB */
   #define CHANNEL_RX_BUF_SIZE      512
   #define CHANNEL_TX_BUF_SIZE      1024
@@ -114,7 +119,7 @@ typedef enum {
 #define LLM_API_KEY_MAX_LEN      511
 #define LLM_API_KEY_BUF_SIZE     (LLM_API_KEY_MAX_LEN + 1)
 #define LLM_MAX_TOKENS           1024
-#define LLM_HTTP_TIMEOUT_MS      20000
+#define LLM_HTTP_TIMEOUT_MS      30000   /* 30s - larger requests with 31+ tools need more time */
 #define LLM_MAX_RETRIES          3
 #define LLM_RETRY_BASE_MS        2000
 #define LLM_RETRY_MAX_MS         10000

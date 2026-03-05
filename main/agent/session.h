@@ -30,6 +30,12 @@ void session_append_tool_use(session_t *s, const char *tool_id,
 void session_append_tool_result(session_t *s, const char *tool_id,
                                  const char *result);
 
+/* Remove the last message from session history (used when LLM fails) */
+void session_pop_last(session_t *s);
+
+/* Clear all session history */
+void session_clear(session_t *s);
+
 /*
  * Build Anthropic-format JSON messages array into out[out_sz].
  * Tool format: {"role":"assistant","content":[{"type":"tool_use",...}]}

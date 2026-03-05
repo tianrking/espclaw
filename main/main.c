@@ -31,6 +31,10 @@
 #include "agent/agent_loop.h"
 #include "agent/persona.h"
 #include "hal/hal_gpio.h"
+#include "hal/hal_pwm.h"
+#include "hal/hal_adc.h"
+#include "hal/hal_servo.h"
+#include "hal/hal_onewire.h"
 #include "service/cron_service.h"
 #include "util/ratelimit.h"
 
@@ -84,6 +88,12 @@ void app_main(void)
 
     /* 5. GPIO HAL */
     hal_gpio_init();
+
+    /* 5.1 Hardware HALs (PWM, ADC, Servo, OneWire) */
+    hal_pwm_init();
+    hal_adc_init();
+    hal_servo_init();
+    hal_onewire_init();
 
     /* 6. Message bus */
     err = message_bus_init(&s_bus);

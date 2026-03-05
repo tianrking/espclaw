@@ -25,6 +25,10 @@ set(SRCS
     # Tool system
     "util/json_util.c"
     "hal/hal_gpio.c"
+    "hal/hal_pwm.c"
+    "hal/hal_adc.c"
+    "hal/hal_servo.c"
+    "hal/hal_onewire.c"
     "tool/tool_registry.c"
     # Services
     "service/cron_service.c"
@@ -93,7 +97,7 @@ idf_component_register(
     INCLUDE_DIRS "."
     REQUIRES
         nvs_flash esp_event esp_timer esp_netif
-        esp_wifi driver
+        esp_wifi driver esp_adc
         esp_http_client esp-tls mbedtls
         mqtt
 )

@@ -164,6 +164,8 @@ static void agent_task(void *arg)
                 ratelimit_record_request();
             }
             if (err != ESP_OK) {
+                /* Remove the user message to avoid orphan history on failure */
+                session_pop_last(&s_session);
                 snprintf(out.text, sizeof(out.text),
                          "[error] LLM call failed: %s", esp_err_to_name(err));
                 got_reply = true;

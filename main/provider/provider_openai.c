@@ -202,12 +202,15 @@ static esp_err_t openai_complete(
     len += snprintf(body + len, LLM_REQUEST_BUF_SIZE - len, "]");
 
     /* Build OpenAI-format tools JSON inline (ignoring tools_json arg which is Anthropic format) */
-    char *oai_tools = malloc(LLM_REQUEST_BUF_SIZE / 2);
+    /* Allocate full buffer size for tools - 31+ tools need ~12KB */
+    char *oai_tools = malloc(LLM_REQUEST_BUF_SIZE);
     if (oai_tools) {
-        int tlen = tool_registry_build_tools_json_openai(oai_tools, LLM_REQUEST_BUF_SIZE / 2);
+        int tlen = tool_registry_build_tools_json_openai(oai_tools, LLM_REQUEST_BUF_SIZE);
         if (tlen > 2) {
             len += snprintf(body + len, LLM_REQUEST_BUF_SIZE - len,
                 ",\"tools\":%s", oai_tools);
+        } else {
+            ESP_LOGW(TAG, "Tools JSON build failed or empty (tlen=%d)", tlen);
         }
         free(oai_tools);
     }
@@ -230,7 +233,7 @@ static esp_err_t openai_complete(
         .crt_bundle_attach= esp_crt_bundle_attach,
         .event_handler    = http_event_handler,
         .user_data        = &ctx,
-        .buffer_size      = 2048,
+        .buffer_size      = 4096,     /* HTTP RX buffer - larger for tool responses */
         .buffer_size_tx   = LLM_REQUEST_BUF_SIZE,
     };
 

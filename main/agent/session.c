@@ -61,6 +61,31 @@ void session_append_tool_result(session_t *s, const char *tool_id,
     m->is_tool_result = true;
 }
 
+void session_pop_last(session_t *s)
+{
+    if (s->count <= 0) return;
+
+    /* Clear the last entry */
+    if (s->count <= MAX_HISTORY_TURNS) {
+        /* Not yet wrapped, last entry is at count-1 */
+        memset(&s->turns[s->count - 1], 0, sizeof(conversation_msg_t));
+    } else {
+        /* Wrapped, last entry is at (head + MAX_HISTORY_TURNS - 1) % MAX_HISTORY_TURNS */
+        int last_idx = (s->head + MAX_HISTORY_TURNS - 1) % MAX_HISTORY_TURNS;
+        memset(&s->turns[last_idx], 0, sizeof(conversation_msg_t));
+        /* Move head back */
+        s->head = (s->head + MAX_HISTORY_TURNS - 1) % MAX_HISTORY_TURNS;
+    }
+    s->count--;
+}
+
+void session_clear(session_t *s)
+{
+    memset(s->turns, 0, sizeof(s->turns));
+    s->count = 0;
+    s->head = 0;
+}
+
 /* -----------------------------------------------------------------------
  * JSON string escaping into out[out_sz], returns bytes written or -1
  * ----------------------------------------------------------------------- */

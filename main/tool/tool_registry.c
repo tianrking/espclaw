@@ -18,6 +18,10 @@ static const char *TAG = "tool_reg";
 #include "tool_cron.c"
 #include "tool_persona.c"
 #include "tool_network.c"
+#include "tool_pwm.c"
+#include "tool_adc.c"
+#include "tool_servo.c"
+#include "tool_onewire.c"
 
 /*
  * X-macro: build static tool table.

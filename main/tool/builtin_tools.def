@@ -27,6 +27,15 @@ TOOL_ENTRY("gpio_read_all",
     "{\"type\":\"object\",\"properties\":{}}",
     tool_gpio_read_all)
 
+/* TEMPORARILY DISABLED - debugging GLM-4.7 tool calling issue
+TOOL_ENTRY("delay",
+    "Wait for specified milliseconds (max 60000). Use between GPIO operations for timing, like blinking LEDs.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"milliseconds\":{\"type\":\"integer\",\"description\":\"Time to wait in ms (max 60000)\"}},"
+    "\"required\":[\"milliseconds\"]}",
+    tool_delay)
+*/
+
 /* Persistent memory */
 TOOL_ENTRY("memory_set",
     "Store a value in persistent NVS memory. Key must start with u_.",
@@ -50,9 +59,23 @@ TOOL_ENTRY("memory_delete",
     "\"required\":[\"key\"]}",
     tool_memory_delete)
 
+/* TEMPORARILY DISABLED - debugging GLM-4.7 tool calling issue
+TOOL_ENTRY("memory_list",
+    "List all user memory keys (u_*). Shows what data has been stored.",
+    "{\"type\":\"object\",\"properties\":{}}",
+    tool_memory_list)
+*/
+
 /* System diagnostics */
+/* TEMPORARILY DISABLED - debugging GLM-4.7 tool calling issue
+TOOL_ENTRY("get_version",
+    "Get firmware version and build info.",
+    "{\"type\":\"object\",\"properties\":{}}",
+    tool_get_version)
+*/
+
 TOOL_ENTRY("get_diagnostics",
-    "Get device health: free heap, uptime, chip info, allowed GPIO pins.",
+    "Get device health: heap memory (free/min/largest), uptime, rate limits, time sync, timezone, GPIO pins, version.",
     "{\"type\":\"object\",\"properties\":{}}",
     tool_system_diagnostics)
 
@@ -126,3 +149,136 @@ TOOL_ENTRY("get_network_info",
     "Get current network status: IP address, gateway, netmask, DNS, WiFi signal strength, MAC address, SSID, channel. Use this when user asks about IP, network status, or connection info.",
     "{\"type\":\"object\",\"properties\":{}}",
     tool_get_network_info)
+
+/* ======================= PWM Tools ======================= */
+TOOL_ENTRY("pwm_setup",
+    "Configure a PWM channel on a GPIO pin for LED dimming or motor speed control. Sets up the hardware PWM generator with specified frequency.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"pin\":{\"type\":\"integer\",\"description\":\"GPIO pin number\"},"
+      "\"channel\":{\"type\":\"integer\",\"description\":\"PWM channel (0-5)\",\"default\":0},"
+      "\"freq\":{\"type\":\"integer\",\"description\":\"Frequency in Hz (100-40000, default 5000)\",\"default\":5000}},"
+    "\"required\":[\"pin\"]}",
+    tool_pwm_setup)
+
+TOOL_ENTRY("pwm_set_duty",
+    "Set PWM duty cycle (brightness/speed). 0% = off, 100% = full power.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"channel\":{\"type\":\"integer\",\"description\":\"PWM channel (0-5)\",\"default\":0},"
+      "\"duty\":{\"type\":\"integer\",\"description\":\"Duty cycle percentage (0-100)\",\"minimum\":0,\"maximum\":100}},"
+    "\"required\":[\"duty\"]}",
+    tool_pwm_set_duty)
+
+TOOL_ENTRY("pwm_set_freq",
+    "Change PWM frequency on an already configured channel.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"channel\":{\"type\":\"integer\",\"description\":\"PWM channel (0-5)\",\"default\":0},"
+      "\"freq\":{\"type\":\"integer\",\"description\":\"Frequency in Hz (100-40000)\"}},"
+    "\"required\":[\"freq\"]}",
+    tool_pwm_set_freq)
+
+TOOL_ENTRY("pwm_stop",
+    "Stop PWM output on a channel.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"channel\":{\"type\":\"integer\",\"description\":\"PWM channel (0-5)\",\"default\":0}},"
+    "\"required\":[]}",
+    tool_pwm_stop)
+
+TOOL_ENTRY("pwm_status",
+    "Get current status of a PWM channel.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"channel\":{\"type\":\"integer\",\"description\":\"PWM channel (0-5)\",\"default\":0}},"
+    "\"required\":[]}",
+    tool_pwm_status)
+
+/* ======================= ADC Tools ======================= */
+TOOL_ENTRY("adc_read",
+    "Read raw ADC value from a GPIO pin (0-4095 for 12-bit ADC). Use for analog sensors like light sensors, potentiometers.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"pin\":{\"type\":\"integer\",\"description\":\"GPIO pin with ADC capability\"}},"
+    "\"required\":[\"pin\"]}",
+    tool_adc_read)
+
+TOOL_ENTRY("adc_read_voltage",
+    "Read voltage in millivolts from an ADC pin. Uses calibration for accuracy. Range: 0-3300 mV.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"pin\":{\"type\":\"integer\",\"description\":\"GPIO pin with ADC capability\"}},"
+    "\"required\":[\"pin\"]}",
+    tool_adc_read_voltage)
+
+TOOL_ENTRY("adc_read_avg",
+    "Read averaged ADC voltage (multiple samples). More stable readings for noisy signals.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"pin\":{\"type\":\"integer\",\"description\":\"GPIO pin with ADC capability\"},"
+      "\"samples\":{\"type\":\"integer\",\"description\":\"Number of samples to average (1-64, default 16)\",\"default\":16}},"
+    "\"required\":[\"pin\"]}",
+    tool_adc_read_avg)
+
+/* ======================= Servo Tools ======================= */
+TOOL_ENTRY("servo_attach",
+    "Attach a servo motor to a GPIO pin. Servo starts at center position (0°). Use for robotic arms, curtains, camera gimbals.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"pin\":{\"type\":\"integer\",\"description\":\"GPIO pin for servo signal\"},"
+      "\"id\":{\"type\":\"integer\",\"description\":\"Servo ID (0-3)\",\"default\":0}},"
+    "\"required\":[\"pin\"]}",
+    tool_servo_attach)
+
+TOOL_ENTRY("servo_write",
+    "Move servo to specified angle. Standard servos: -90° to +90°. Continuous rotation servos: angle controls speed.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"id\":{\"type\":\"integer\",\"description\":\"Servo ID (0-3)\",\"default\":0},"
+      "\"angle\":{\"type\":\"integer\",\"description\":\"Angle in degrees (-90 to +90)\",\"minimum\":-90,\"maximum\":90}},"
+    "\"required\":[\"angle\"]}",
+    tool_servo_write)
+
+TOOL_ENTRY("servo_write_us",
+    "Set servo pulse width directly in microseconds (500-2500). For non-standard servos or precise control.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"id\":{\"type\":\"integer\",\"description\":\"Servo ID (0-3)\",\"default\":0},"
+      "\"pulse_us\":{\"type\":\"integer\",\"description\":\"Pulse width in microseconds (500-2500)\",\"minimum\":500,\"maximum\":2500}},"
+    "\"required\":[\"pulse_us\"]}",
+    tool_servo_write_us)
+
+TOOL_ENTRY("servo_read",
+    "Get current angle of a servo.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"id\":{\"type\":\"integer\",\"description\":\"Servo ID (0-3)\",\"default\":0}},"
+    "\"required\":[]}",
+    tool_servo_read)
+
+TOOL_ENTRY("servo_detach",
+    "Detach servo and release resources. Servo will go limp.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"id\":{\"type\":\"integer\",\"description\":\"Servo ID (0-3)\",\"default\":0}},"
+    "\"required\":[]}",
+    tool_servo_detach)
+
+/* ======================= OneWire Temperature Tools ======================= */
+TOOL_ENTRY("temp_setup",
+    "Setup a OneWire bus for DS18B20 temperature sensors on a GPIO pin. Requires 4.7K pull-up resistor.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"pin\":{\"type\":\"integer\",\"description\":\"GPIO pin for OneWire bus\"},"
+      "\"bus\":{\"type\":\"integer\",\"description\":\"Bus ID (0-1)\",\"default\":0}},"
+    "\"required\":[\"pin\"]}",
+    tool_temp_setup)
+
+TOOL_ENTRY("temp_scan",
+    "Scan for DS18B20 temperature sensors on a bus. Returns device addresses.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"bus\":{\"type\":\"integer\",\"description\":\"Bus ID (0-1)\",\"default\":0}},"
+    "\"required\":[]}",
+    tool_temp_scan)
+
+TOOL_ENTRY("temp_read",
+    "Read temperature from DS18B20 sensor. If no ROM specified, reads from first/only device on bus.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"bus\":{\"type\":\"integer\",\"description\":\"Bus ID (0-1)\",\"default\":0},"
+      "\"rom\":{\"type\":\"string\",\"description\":\"Device ROM address (16 hex chars, optional)\"}},"
+    "\"required\":[]}",
+    tool_temp_read)
+
+TOOL_ENTRY("temp_release",
+    "Release a OneWire bus and free resources.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"bus\":{\"type\":\"integer\",\"description\":\"Bus ID (0-1)\",\"default\":0}},"
+    "\"required\":[]}",
+    tool_temp_release)

@@ -12,12 +12,13 @@
 int context_build_system_prompt(char *out, size_t out_sz, const char *tools_desc)
 {
     persona_type_t p = persona_get();
-    
+
+    /* Simplified system prompt - temporarily removed verbose tool instructions */
     int n = snprintf(out, out_sz,
         "You are ESPClaw, an embedded AI assistant running on an %s microcontroller "
         "(ESP-IDF 5.5, FreeRTOS). Free heap: %lu bytes. "
         "Be concise. Respond in the same language the user uses. "
-        "IMPORTANT: When the user asks you to remember, store, or save anything, "
+        "When the user asks you to remember, store, or save anything, "
         "you MUST call the memory_set tool immediately. Key must start with u_. "
         "When the user asks what you remember or stored, call memory_get. "
         "Never just say you remembered something without actually calling the tool. "

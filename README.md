@@ -125,7 +125,7 @@ Any other input is sent to the LLM agent for processing.
 
 ## Features
 
-### Built-in Tools (18 total)
+### Built-in Tools (40 total)
 
 | Category | Tools |
 |----------|-------|
@@ -134,6 +134,44 @@ Any other input is sent to the LLM agent for processing.
 | Cron | `cron_schedule`, `cron_list`, `cron_cancel`, `cron_cancel_all` (4) |
 | Time | `get_time`, `set_timezone` (2) |
 | System | `get_diagnostics` (1) |
+| PWM | `pwm_setup`, `pwm_set_duty`, `pwm_set_freq`, `pwm_stop`, `pwm_status` (5) |
+| ADC | `adc_read`, `adc_read_voltage`, `adc_read_avg` (3) |
+| Servo | `servo_attach`, `servo_write`, `servo_write_us`, `servo_read`, `servo_detach` (5) |
+| Temperature | `temp_setup`, `temp_scan`, `temp_read`, `temp_release` (4) |
+| Network | `wifi_scan`, `get_network_info` (2) |
+| Persona | `set_persona`, `get_persona` (2) |
+| Utility | `delay` (1) |
+
+### Hardware Tools Detail
+
+#### PWM (LED Dimming, Motor Speed)
+```
+pwm_setup(pin=5, channel=0, freq=5000)  → Configure PWM channel
+pwm_set_duty(channel=0, duty=50)        → Set 50% duty cycle
+pwm_stop(channel=0)                     → Stop output
+```
+
+#### ADC (Analog Sensors)
+```
+adc_read(pin=1)              → Read raw value + voltage
+adc_read_voltage(pin=1)      → Read voltage in mV
+adc_read_avg(pin=1, samples=16) → Averaged reading
+```
+
+#### Servo (Motor Control)
+```
+servo_attach(pin=6, id=0)    → Attach servo
+servo_write(id=0, angle=45)  → Move to 45°
+servo_read(id=0)             → Read current angle
+servo_detach(id=0)           → Release servo
+```
+
+#### Temperature (DS18B20)
+```
+temp_setup(pin=7, bus=0)     → Setup OneWire bus
+temp_scan(bus=0)             → Find devices
+temp_read(bus=0)             → Read temperature
+```
 
 ### Scheduled Tasks
 
@@ -191,7 +229,7 @@ espclaw> cancel all tasks
                               │
                     ┌─────────▼─────────┐
                     │       HAL         │ 安全护栏
-                    │  GPIO │ I2C │ PWM │
+                    │ GPIO │ PWM │ ADC │ Servo │ OneWire │
                     └───────────────────┘
 ```
 
@@ -295,9 +333,13 @@ main/
 │   ├── tool_gpio.c        # GPIO 工具
 │   ├── tool_memory.c      # 内存工具
 │   ├── tool_cron.c        # 定时任务工具
-│   └── tool_system.c      # 系统诊断
+│   ├── tool_system.c      # 系统诊断
 │   ├── tool_persona.c     # AI 人格切换
 │   ├── tool_network.c     # 网络扫描
+│   ├── tool_pwm.c         # PWM 工具 (调光/调速)
+│   ├── tool_adc.c         # ADC 工具 (模拟传感器)
+│   ├── tool_servo.c       # Servo 工具 (舵机控制)
+│   └── tool_onewire.c     # OneWire 工具 (温度传感器)
 │
 ├── service/
 │   ├── cron_service.h/.c  # 定时任务服务
@@ -308,7 +350,11 @@ main/
 │   └── nvs_manager.h/.c   # NVS 封装
 │
 ├── hal/
-│   └── hal_gpio.h/.c      # GPIO HAL + 安全护栏
+│   ├── hal_gpio.h/.c      # GPIO HAL + 安全护栏
+│   ├── hal_pwm.h/.c       # PWM HAL (LED调光/电机调速)
+│   ├── hal_adc.h/.c       # ADC HAL (模拟传感器)
+│   ├── hal_servo.h/.c     # Servo HAL (舵机控制)
+│   └── hal_onewire.h/.c   # OneWire HAL (DS18B20温度)
 │
 └── util/
     ├── json_util.h/.c     # JSON 解析
