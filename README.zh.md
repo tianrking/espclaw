@@ -93,18 +93,20 @@ scripts/provision.sh \
 
 ### 通知通道（10 个）
 
-| 通道 | 类型 | 协议 |
-|------|------|------|
-| Serial | 双向 | UART 串口控制台（默认启用）|
-| Telegram | 双向 | Bot API 长轮询 |
-| MQTT | 双向 | IoT 标准协议（Home Assistant / Node-RED）|
-| 钉钉 | 单向发送 | Webhook + HMAC 签名 |
-| Discord | 单向发送 | Webhook |
-| Slack | 单向发送 | Incoming Webhook |
-| 企业微信 | 单向发送 | 群机器人 Webhook |
-| 飞书 | 单向发送 | 机器人 + 签名验证 |
-| Pushplus | 单向发送 | 统一推送服务 |
-| Bark | 单向发送 | iOS 推送通知 |
+> **状态说明：** Serial 和 Telegram 已完整测试并稳定运行。其他通道代码结构完整，但尚未在真实服务上验证。
+
+| 通道 | 类型 | 协议 | 状态 |
+|------|------|------|------|
+| Serial | 双向 | UART 串口控制台（默认启用）| **已验证** |
+| Telegram | 双向 | Bot API 长轮询 | **已验证** |
+| MQTT | 双向 | IoT 标准协议（Home Assistant / Node-RED）| 开发中 |
+| 钉钉 | 单向发送 | Webhook + HMAC 签名 | 开发中 |
+| Discord | 单向发送 | Webhook | 开发中 |
+| Slack | 单向发送 | Incoming Webhook | 开发中 |
+| 企业微信 | 单向发送 | 群机器人 Webhook | 开发中 |
+| 飞书 | 单向发送 | 机器人 + 签名验证 | 开发中 |
+| Pushplus | 单向发送 | 统一推送服务 | 开发中 |
+| Bark | 单向发送 | iOS 推送通知 | 开发中 |
 
 所有通道通过 `CONFIG_ESPCLAW_CHANNEL_xxx` 条件编译按需启用。
 

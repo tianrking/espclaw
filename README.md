@@ -84,18 +84,20 @@ Tested with: GPT-4o-mini, Claude 3 Haiku, GLM-4.5, DeepSeek, Qwen, etc.
 
 ### Notification Channels (10)
 
-| Channel | Type | Protocol |
-|---------|------|----------|
-| Serial | Bidirectional | UART console (always on) |
-| Telegram | Bidirectional | Bot API long polling |
-| MQTT | Bidirectional | IoT standard (Home Assistant / Node-RED) |
-| DingTalk | Outbound | Webhook + HMAC signature |
-| Discord | Outbound | Webhook |
-| Slack | Outbound | Incoming Webhook |
-| WeCom | Outbound | Enterprise WeChat bot |
-| Lark | Outbound | Feishu bot + signature |
-| Pushplus | Outbound | Unified push service |
-| Bark | Outbound | iOS push notification |
+> **Status:** Serial and Telegram are fully tested and stable. Other channels are compiled and structurally complete but not yet verified on real hardware/services.
+
+| Channel | Type | Protocol | Status |
+|---------|------|----------|--------|
+| Serial | Bidirectional | UART console (always on) | **Verified** |
+| Telegram | Bidirectional | Bot API long polling | **Verified** |
+| MQTT | Bidirectional | IoT standard (Home Assistant / Node-RED) | WIP |
+| DingTalk | Outbound | Webhook + HMAC signature | WIP |
+| Discord | Outbound | Webhook | WIP |
+| Slack | Outbound | Incoming Webhook | WIP |
+| WeCom | Outbound | Enterprise WeChat bot | WIP |
+| Lark | Outbound | Feishu bot + signature | WIP |
+| Pushplus | Outbound | Unified push service | WIP |
+| Bark | Outbound | iOS push notification | WIP |
 
 All channels are conditionally compiled via `CONFIG_ESPCLAW_CHANNEL_xxx`.
 

@@ -22,7 +22,7 @@ ESP-IDF 5.5 纯 C AI 助手固件，支持 ESP32-C3 / C5 / S3。
 - [x] Step 4 — LLM 对话（Anthropic / OpenAI 兼容接口）
 - [x] Step 5 — ReAct Agent（多轮对话 + 历史记录）
 - [x] Step 6 — 工具系统（20 个工具）
-- [x] Step 7 — 多通道系统（10 个通道：Serial + Telegram 双向 + 8 个单向通知）
+- [x] Step 7 — 多通道系统（10 个通道：Serial + Telegram 已验证，其余 8 个开发中）
 - [x] Step 8 — 定时任务 + 速率限制 + Telegram 稳定性优化
 - [ ] Step 9 — 生产就绪（OTA + 启动保护）← 下一步
 - [ ] Step 10 — S3 全功能（文件系统 + WebSocket）
@@ -62,20 +62,23 @@ ESP-IDF 5.5 纯 C AI 助手固件，支持 ESP32-C3 / C5 / S3。
 
 ---
 
-## Step 7: 多通道系统 (已完成)
+## Step 7: 多通道系统 (代码完成，部分验证)
+
+> Serial 和 Telegram 已在 ESP32-C5 上完整测试并稳定运行。
+> 其他 8 个通道代码结构完整（可编译），但尚未在真实服务上验证，标记为开发中。
 
 | 通道 | 类型 | 说明 | 状态 |
 |------|------|------|------|
-| Serial | 双向 | UART 串口控制台（默认启用）| ✅ |
-| Telegram | 双向 | Bot API 长轮询 + 发送 | ✅ |
-| MQTT | 双向 | IoT 标准协议 | ✅ |
-| 钉钉 | 单向 | Webhook + HMAC 签名 | ✅ |
-| Discord | 单向 | Webhook | ✅ |
-| Slack | 单向 | Incoming Webhook | ✅ |
-| 企业微信 | 单向 | 群机器人 Markdown | ✅ |
-| 飞书 | 单向 | 机器人 + 签名验证 | ✅ |
-| Pushplus | 单向 | 统一推送服务 | ✅ |
-| Bark | 单向 | iOS 推送通知 | ✅ |
+| Serial | 双向 | UART 串口控制台（默认启用）| ✅ 已验证 |
+| Telegram | 双向 | Bot API 长轮询 + 发送 | ✅ 已验证 |
+| MQTT | 双向 | IoT 标准协议 | 🔄 开发中 |
+| 钉钉 | 单向 | Webhook + HMAC 签名 | 🔄 开发中 |
+| Discord | 单向 | Webhook | 🔄 开发中 |
+| Slack | 单向 | Incoming Webhook | 🔄 开发中 |
+| 企业微信 | 单向 | 群机器人 Markdown | 🔄 开发中 |
+| 飞书 | 单向 | 机器人 + 签名验证 | 🔄 开发中 |
+| Pushplus | 单向 | 统一推送服务 | 🔄 开发中 |
+| Bark | 单向 | iOS 推送通知 | 🔄 开发中 |
 
 架构特点：
 - 条件编译 `CONFIG_ESPCLAW_CHANNEL_xxx`
