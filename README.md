@@ -116,7 +116,7 @@ ESPClaw provides local commands that are handled immediately without calling the
 | Command | Description |
 |---------|-------------|
 | `/help` | Show available commands |
-| `/tools` | List registered tools (17 tools) |
+| `/tools` | List registered tools (18 tools) |
 | `/heap` | Show free heap memory |
 | `/gpio` | Show allowed GPIO pin range |
 | `/reset` | Software reset |
@@ -125,7 +125,7 @@ Any other input is sent to the LLM agent for processing.
 
 ## Features
 
-### Built-in Tools (17 total)
+### Built-in Tools (18 total)
 
 | Category | Tools |
 |----------|-------|
@@ -230,7 +230,7 @@ espclaw> cancel all tasks
 | **Util** | JSON | `util/json_util.c` | 轻量 JSON 解析 (无 cJSON) ✅ |
 | | HTTP | `util/http_client.c` | HTTPS 客户端封装 ✅ |
 
-### Tools Detail (17 total)
+### Tools Detail (18 total)
 
 | 工具名 | 参数 | 功能 |
 |--------|------|------|
@@ -250,6 +250,7 @@ espclaw> cancel all tasks
 | `set_persona` | `persona` | 设置 AI 人格 (neutral/friendly/technical/witty) |
 | `get_persona` | - | 获取当前 AI 人格设置 |
 | `wifi_scan` | - | 扫描附近 WiFi 网络（会短暂断网）|
+| `get_network_info` | - | 获取网络状态（IP/网关/DNS/MAC/信号）|
 
 ### File Structure
 

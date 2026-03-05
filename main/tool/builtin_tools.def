@@ -121,3 +121,8 @@ TOOL_ENTRY("wifi_scan",
     "Scan nearby WiFi networks. Returns SSID, signal strength, channel, and security type. WARNING: This will disconnect from WiFi for 2-5 seconds, so you will lose connection to the LLM temporarily. Always warn the user before calling this tool!",
     "{\"type\":\"object\",\"properties\":{}}",
     tool_wifi_scan)
+
+TOOL_ENTRY("get_network_info",
+    "Get current network status: IP address, gateway, netmask, DNS, WiFi signal strength, MAC address, SSID, channel. Use this when user asks about IP, network status, or connection info.",
+    "{\"type\":\"object\",\"properties\":{}}",
+    tool_get_network_info)

@@ -21,7 +21,7 @@ ESP-IDF 5.5 纯 C AI 助手固件，主攻 ESP32-C3，兼容 ESP32-S3/C5。
 - [x] Step 3 — 串口交互 (已验证，C5 上运行正常)
 - [x] Step 4 — LLM 对话 (已验证，支持 Anthropic / OpenAI 兼容接口)
 - [x] Step 5 — ReAct Agent (已验证，多轮对话 + 历史记录)
-- [x] Step 6 — 工具系统 (已验证，GPIO + Memory + Cron + Persona + Network (17个工具))
+- [x] Step 6 — 工具系统 (已验证，GPIO + Memory + Cron + Persona + Network (18个工具))
 - [x] Step 7 — 多通道系统 (9个通知通道已完成)
 - [x] Step 8 — 定时任务与速率限制 (已完成)
 - [ ] Step 9 — 生产就绪 ← 当前
