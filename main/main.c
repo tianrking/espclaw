@@ -29,6 +29,7 @@
 #include "channel/channel.h"
 #include "provider/provider.h"
 #include "agent/agent_loop.h"
+#include "agent/persona.h"
 #include "hal/hal_gpio.h"
 #include "service/cron_service.h"
 #include "util/ratelimit.h"
@@ -60,7 +61,10 @@ void app_main(void)
     /* 2.5 Rate limiter init */
     ratelimit_init();
 
-    /* 2.6 Cron service init */
+    /* 2.6 Persona init (load from NVS) */
+    persona_init();
+
+    /* 2.7 Cron service init */
     err = cron_init();
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "Cron init failed: %s", esp_err_to_name(err));

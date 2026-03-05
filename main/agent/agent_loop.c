@@ -60,15 +60,18 @@ static bool try_dispatch_tool(const char *reply,
         return true; /* still a tool_use, just broken */
     }
 
-    /* Extract input object (raw JSON) */
-    const char *input_obj = json_get_object(reply, "input");
-    const char *input_json = input_obj ? input_obj : "{}";
+    /* Extract input object (complete JSON object with proper boundary) */
+    const char *input_start = json_get_object(reply, "input");
+    if (input_start) {
+        /* Use json_copy_object to get the complete object with correct boundary */
+        if (json_copy_object(input_start, input_out, input_sz) < 0) {
+            strncpy(input_out, "{}", input_sz - 1);
+        }
+    } else {
+        strncpy(input_out, "{}", input_sz - 1);
+    }
 
-    /* Copy input JSON for caller to store in session */
-    strncpy(input_out, input_json, input_sz - 1);
-    input_out[input_sz - 1] = '\0';
-
-    tool_registry_dispatch(tool_name_out, input_json, result_buf, result_sz);
+    tool_registry_dispatch(tool_name_out, input_out, result_buf, result_sz);
     return true;
 }
 

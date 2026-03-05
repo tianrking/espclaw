@@ -102,3 +102,16 @@ TOOL_ENTRY("set_timezone",
       "},\"required\":[\"timezone\"]}",
     tool_set_timezone)
 
+
+/* Persona (personality) control */
+TOOL_ENTRY("set_persona",
+    "Change the AI's personality style. Options: neutral, friendly, technical, witty.",
+    "{\"type\":\"object\",\"properties\":{"
+      "\"persona\":{\"type\":\"string\",\"description\":\"Persona name: neutral, friendly, technical, or witty\"}"
+      "},\"required\":[\"persona\"]}",
+    set_persona_exec)
+
+TOOL_ENTRY("get_persona",
+    "Get the current AI persona (personality style) setting.",
+    "{\"type\":\"object\",\"properties\":{}}",
+    get_persona_exec)

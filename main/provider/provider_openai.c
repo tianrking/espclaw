@@ -214,6 +214,10 @@ static esp_err_t openai_complete(
 
     len += snprintf(body + len, LLM_REQUEST_BUF_SIZE - len, "}");
 
+    /* Debug: log request body (first 500 chars) */
+    ESP_LOGI(TAG, "Request body (%d bytes): %.500s%s", len, body,
+             len > 500 ? "..." : "");
+
     char *resp = malloc(LLM_RESPONSE_BUF_SIZE);
     if (!resp) { free(body); return ESP_ERR_NO_MEM; }
 
@@ -244,11 +248,17 @@ static esp_err_t openai_complete(
 
     esp_err_t err = esp_http_client_perform(client);
     int status    = esp_http_client_get_status_code(client);
+    
+    /* Debug: log response on error */
+    if (err != ESP_OK || status != 200) {
+        ESP_LOGE(TAG, "HTTP %d: %s, status=%d", err, esp_err_to_name(err), status);
+        ESP_LOGE(TAG, "Response: %.500s", resp);
+    }
+    
     esp_http_client_cleanup(client);
     free(body);
 
     if (err != ESP_OK || status != 200) {
-        ESP_LOGE(TAG, "HTTP %d: %s, status=%d", err, esp_err_to_name(err), status);
         free(resp);
         return ESP_FAIL;
     }

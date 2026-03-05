@@ -21,6 +21,7 @@ set(SRCS
     # ReAct agent modules
     "agent/session.c"
     "agent/context_builder.c"
+    "agent/persona.c"
     # Tool system
     "util/json_util.c"
     "hal/hal_gpio.c"

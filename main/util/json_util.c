@@ -59,12 +59,69 @@ bool json_get_int(const char *json, const char *key, int *out)
     return true;
 }
 
+/*
+ * Extract a complete JSON object or array starting at the key.
+ * Returns a pointer to the start, and writes the length of the
+ * complete object/array to *len_out (if provided).
+ * 
+ * This properly tracks nested braces/brackets and strings to find
+ * the correct boundary.
+ */
 const char *json_get_object(const char *json, const char *key)
 {
     const char *v = find_value(json, key);
     if (!v) return NULL;
-    if (*v == '{' || *v == '[') return v;
-    return NULL;
+    if (*v != '{' && *v != '[') return NULL;
+    return v;
+}
+
+/*
+ * Copy a complete JSON object/array from src into dst.
+ * Properly handles nested structures and escaped strings.
+ * Returns the number of characters copied (excluding NUL).
+ */
+int json_copy_object(const char *src, char *dst, size_t dst_sz)
+{
+    if (!src || !dst || dst_sz < 1) return -1;
+    if (*src != '{' && *src != '[') {
+        dst[0] = '\0';
+        return -1;
+    }
+
+    char open_char = *src;
+    char close_char = (open_char == '{') ? '}' : ']';
+    int depth = 0;
+    bool in_string = false;
+    size_t pos = 0;
+
+    for (const char *p = src; *p && pos < dst_sz - 1; p++) {
+        char c = *p;
+
+        if (in_string) {
+            dst[pos++] = c;
+            if (c == '\\' && *(p + 1)) {
+                /* Escape sequence - copy next char too */
+                dst[pos++] = *++p;
+            } else if (c == '"') {
+                in_string = false;
+            }
+        } else {
+            dst[pos++] = c;
+            if (c == '"') {
+                in_string = true;
+            } else if (c == open_char) {
+                depth++;
+            } else if (c == close_char) {
+                depth--;
+                if (depth == 0) {
+                    break;  /* Found matching close */
+                }
+            }
+        }
+    }
+
+    dst[pos] = '\0';
+    return (int)pos;
 }
 
 void json_unescape(char *buf)

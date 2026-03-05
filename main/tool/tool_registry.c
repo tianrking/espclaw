@@ -4,6 +4,7 @@
  */
 #include "tool_registry.h"
 #include "tool.h"
+#include "agent/persona.h"
 #include "esp_log.h"
 #include <string.h>
 #include <stdio.h>
@@ -15,6 +16,7 @@ static const char *TAG = "tool_reg";
 #include "tool_memory.c"
 #include "tool_system.c"
 #include "tool_cron.c"
+#include "tool_persona.c"
 
 /*
  * X-macro: build static tool table.

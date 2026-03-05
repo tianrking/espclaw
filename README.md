@@ -116,7 +116,7 @@ ESPClaw provides local commands that are handled immediately without calling the
 | Command | Description |
 |---------|-------------|
 | `/help` | Show available commands |
-| `/tools` | List registered tools (14 tools) |
+| `/tools` | List registered tools (16 tools) |
 | `/heap` | Show free heap memory |
 | `/gpio` | Show allowed GPIO pin range |
 | `/reset` | Software reset |
@@ -125,7 +125,7 @@ Any other input is sent to the LLM agent for processing.
 
 ## Features
 
-### Built-in Tools (14 total)
+### Built-in Tools (16 total)
 
 | Category | Tools |
 |----------|-------|
@@ -214,6 +214,7 @@ espclaw> cancel all tasks
 | **Agent** | ReAct Loop | `agent/agent_loop.c` | 多轮工具调用循环 ✅ |
 | | Session | `agent/session.c` | 对话历史管理 ✅ |
 | | Context | `agent/context_builder.c` | 系统提示词组装 ✅ |
+| | Persona | `agent/persona.c` | AI 人格切换 ✅ |
 | **Provider** | Anthropic | `provider_anthropic.c` | Messages API ✅ |
 | | OpenAI | `provider_openai.c` | Chat Completions API ✅ |
 | **Tools** | GPIO | `tool_gpio.c` | 3个工具: write/read/read_all ✅ |
@@ -229,7 +230,7 @@ espclaw> cancel all tasks
 | **Util** | JSON | `util/json_util.c` | 轻量 JSON 解析 (无 cJSON) ✅ |
 | | HTTP | `util/http_client.c` | HTTPS 客户端封装 ✅ |
 
-### Tools Detail (14 total)
+### Tools Detail (16 total)
 
 | 工具名 | 参数 | 功能 |
 |--------|------|------|
@@ -246,6 +247,8 @@ espclaw> cancel all tasks
 | `get_time` | - | 获取当前时间和 NTP 状态 |
 | `set_timezone` | `timezone` | 设置时区 |
 | `get_diagnostics` | - | 获取系统诊断信息 |
+| `set_persona` | `persona` | 设置 AI 人格 (neutral/friendly/technical/witty) |
+| `get_persona` | - | 获取当前 AI 人格设置 |
 
 ### File Structure
 
@@ -262,6 +265,7 @@ main/
 │   ├── agent_loop.c       # ReAct 循环
 │   ├── session.h/.c       # 对话历史
 │   └── context_builder.h/.c
+│   └── persona.h/.c       # AI 人格系统
 │
 ├── channel/
 │   ├── channel.h          # Channel vtable 接口
@@ -290,6 +294,7 @@ main/
 │   ├── tool_memory.c      # 内存工具
 │   ├── tool_cron.c        # 定时任务工具
 │   └── tool_system.c      # 系统诊断
+│   ├── tool_persona.c     # AI 人格切换
 │
 ├── service/
 │   ├── cron_service.h/.c  # 定时任务服务
