@@ -21,7 +21,7 @@ ESP-IDF 5.5 纯 C AI 助手固件，主攻 ESP32-C3，兼容 ESP32-S3/C5。
 - [x] Step 3 — 串口交互 (已验证，C5 上运行正常)
 - [x] Step 4 — LLM 对话 (已验证，支持 Anthropic / OpenAI 兼容接口)
 - [x] Step 5 — ReAct Agent (已验证，多轮对话 + 历史记录)
-- [x] Step 6 — 工具系统 (已验证，GPIO + Memory + Cron + Persona + Network (18个工具))
+- [x] Step 6 — 工具系统 (已验证，GPIO + Memory + Cron + Persona + Network + Delay + Version (20个工具))
 - [x] Step 7 — 多通道系统 (9个通知通道已完成)
 - [x] Step 8 — 定时任务与速率限制 (已完成)
 - [ ] Step 9 — 生产就绪 ← 当前
@@ -36,7 +36,7 @@ ESP-IDF 5.5 纯 C AI 助手固件，主攻 ESP32-C3，兼容 ESP32-S3/C5。
 - Message Bus / Channel 系统
 - LLM Provider (Anthropic/OpenAI)
 - ReAct Agent + Session
-- Tool Registry + 17个内置工具
+- Tool Registry + 20个内置工具
 - GPIO HAL + 安全护栏
 
 ---
@@ -136,6 +136,12 @@ espclaw> cancel all tasks
 ### 9.4 增强诊断
 **新增工具:**
 - `get_diagnostics` 增强：增加 rate limit 状态、cron 任务统计、uptime
+- `delay`: 延时等待 (最大60秒)
+- `memory_list`: 列出所有用户存储的键
+- `get_version`: 获取固件版本信息
+
+**错误恢复:**
+- `session_pop_last()`: LLM调用失败时自动清理历史，避免UTF-8编码错误影响后续对话
 
 **验证:**
 ```bash

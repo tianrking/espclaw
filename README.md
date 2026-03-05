@@ -116,7 +116,7 @@ ESPClaw provides local commands that are handled immediately without calling the
 | Command | Description |
 |---------|-------------|
 | `/help` | Show available commands |
-| `/tools` | List registered tools (18 tools) |
+| `/tools` | List registered tools (20 tools) |
 | `/heap` | Show free heap memory |
 | `/gpio` | Show allowed GPIO pin range |
 | `/reset` | Software reset |
@@ -125,15 +125,15 @@ Any other input is sent to the LLM agent for processing.
 
 ## Features
 
-### Built-in Tools (18 total)
+### Built-in Tools (20 total)
 
 | Category | Tools |
 |----------|-------|
-| GPIO | `gpio_write`, `gpio_read`, `gpio_read_all` (3) |
-| Memory | `memory_set`, `memory_get`, `memory_delete` (3) |
+| GPIO | `gpio_write`, `gpio_read`, `gpio_read_all`, `delay` (4) |
+| Memory | `memory_set`, `memory_get`, `memory_delete`, `memory_list` (4) |
 | Cron | `cron_schedule`, `cron_list`, `cron_cancel`, `cron_cancel_all` (4) |
 | Time | `get_time`, `set_timezone` (2) |
-| System | `get_diagnostics` (1) |
+| System | `get_diagnostics`, `get_version` (2) |
 
 ### Scheduled Tasks
 
@@ -230,16 +230,18 @@ espclaw> cancel all tasks
 | **Util** | JSON | `util/json_util.c` | 轻量 JSON 解析 (无 cJSON) ✅ |
 | | HTTP | `util/http_client.c` | HTTPS 客户端封装 ✅ |
 
-### Tools Detail (18 total)
+### Tools Detail (20 total)
 
 | 工具名 | 参数 | 功能 |
 |--------|------|------|
 | `gpio_write` | `pin`, `state` | 设置 GPIO 高低电平 |
 | `gpio_read` | `pin` | 读取 GPIO 状态 |
 | `gpio_read_all` | - | 读取所有允许的 GPIO |
+| `delay` | `milliseconds` | 延时等待 (最大60秒) |
 | `memory_set` | `key`, `value` | 持久化存储 (NVS) |
 | `memory_get` | `key` | 读取存储的值 |
 | `memory_delete` | `key` | 删除存储的键 |
+| `memory_list` | - | 列出所有用户存储的键 |
 | `cron_schedule` | `type`, `action`, `interval_seconds`/`hour`/`delay_seconds` | 创建定时任务 |
 | `cron_list` | - | 列出所有任务 |
 | `cron_cancel` | `id` | 取消指定任务 |
@@ -247,6 +249,7 @@ espclaw> cancel all tasks
 | `get_time` | - | 获取当前时间和 NTP 状态 |
 | `set_timezone` | `timezone` | 设置时区 |
 | `get_diagnostics` | - | 获取系统诊断信息 |
+| `get_version` | - | 获取固件版本信息 |
 | `set_persona` | `persona` | 设置 AI 人格 (neutral/friendly/technical/witty) |
 | `get_persona` | - | 获取当前 AI 人格设置 |
 | `wifi_scan` | - | 扫描附近 WiFi 网络（会短暂断网）|
