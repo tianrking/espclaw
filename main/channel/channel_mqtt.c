@@ -120,7 +120,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
                      event->topic_len, event->topic,
                      event->data_len, event->data);
 
-            /* Forward to agent via inbound queue */
+            /* Forward to agent via inbound queue - wait up to 60s for agent to be ready */
             if (s_bus && event->data_len > 0 && event->data_len < MAX_MESSAGE_LEN) {
                 inbound_msg_t msg = {0};
                 memcpy(msg.text, event->data,
@@ -129,15 +129,21 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
                 msg.source = MSG_SOURCE_MQTT;
                 msg.chat_id = 0;  /* MQTT doesn't use chat_id */
 
-                if (message_bus_post_inbound(s_bus, &msg, pdMS_TO_TICKS(100)) != pdPASS) {
-                    ESP_LOGW(TAG, "Failed to post inbound message");
+                /* Wait for agent to be ready (up to 60s to match LLM timeout) */
+                if (message_bus_post_inbound(s_bus, &msg, pdMS_TO_TICKS(60000)) != pdPASS) {
+                    ESP_LOGW(TAG, "Failed to post inbound message (queue full, timeout)");
                 }
             }
             break;
 
         case MQTT_EVENT_ERROR:
-            ESP_LOGE(TAG, "MQTT error: %s",
-                     event->error_handle ? event->error_handle->esp_tls_stack_err_name : "unknown");
+            if (event->error_handle) {
+                ESP_LOGE(TAG, "MQTT error: type=%d, tls_err=%d",
+                         event->error_handle->error_type,
+                         event->error_handle->esp_tls_stack_err);
+            } else {
+                ESP_LOGE(TAG, "MQTT error: unknown");
+            }
             break;
 
         case MQTT_EVENT_BEFORE_CONNECT:

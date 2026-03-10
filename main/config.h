@@ -121,7 +121,7 @@ typedef enum {
 #define LLM_API_KEY_MAX_LEN      511
 #define LLM_API_KEY_BUF_SIZE     (LLM_API_KEY_MAX_LEN + 1)
 #define LLM_MAX_TOKENS           1024
-#define LLM_HTTP_TIMEOUT_MS      20000
+#define LLM_HTTP_TIMEOUT_MS      60000   /* 60s for slow LLM APIs */
 #define LLM_MAX_RETRIES          3
 #define LLM_RETRY_BASE_MS        2000
 #define LLM_RETRY_MAX_MS         10000

@@ -15,14 +15,26 @@
   #define ESPCLAW_TARGET_S3        1
   #define ESPCLAW_TARGET_C3        0
   #define ESPCLAW_DUAL_CORE        1
-  #define ESPCLAW_HAS_PSRAM        1
+  #ifdef CONFIG_SPIRAM
+    #define ESPCLAW_HAS_PSRAM      1
+  #else
+    #define ESPCLAW_HAS_PSRAM      0
+  #endif
   #define ESPCLAW_HAS_SPI_HAL      1
-  #define ESPCLAW_HAS_LITTLEFS     1
-  #define ESPCLAW_HAS_WEBSOCKET    1
-  #define ESPCLAW_HAS_HEARTBEAT    1
-  #define ESPCLAW_HAS_HTTP_PROXY   1
-  #define ESPCLAW_HAS_FILE_TOOLS   1
-  #define ESPCLAW_FLASH_SIZE_MB    16
+  #if ESPCLAW_HAS_PSRAM
+    #define ESPCLAW_HAS_LITTLEFS   1
+    #define ESPCLAW_HAS_WEBSOCKET  1
+    #define ESPCLAW_HAS_HEARTBEAT  1
+    #define ESPCLAW_HAS_HTTP_PROXY 1
+    #define ESPCLAW_HAS_FILE_TOOLS 1
+  #else
+    #define ESPCLAW_HAS_LITTLEFS   0
+    #define ESPCLAW_HAS_WEBSOCKET  0
+    #define ESPCLAW_HAS_HEARTBEAT  0
+    #define ESPCLAW_HAS_HTTP_PROXY 0
+    #define ESPCLAW_HAS_FILE_TOOLS 0
+  #endif
+  #define ESPCLAW_FLASH_SIZE_MB    4
   #define ESPCLAW_TARGET_NAME      "esp32s3"
 #elif defined(CONFIG_IDF_TARGET_ESP32C3)
   #define ESPCLAW_TARGET_S3        0

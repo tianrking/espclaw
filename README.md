@@ -24,24 +24,33 @@ ESPClaw remembers user preferences across reboots via NVS storage:
 
 <img src="media/memory.png" width="80%" alt="Memory demo - LLM remembers user name">
 
+### MQTT Channel
+
+ESPClaw supports bidirectional MQTT communication for IoT integration (Home Assistant, Node-RED, etc.):
+
+<img src="media/espc5_mqtt.png" width="80%" alt="MQTT demo - ESP32-S3 with MQTTX">
+
 ## Supported Targets
 
-| Target | Cores | PSRAM | Flash | Profile |
-|--------|-------|-------|-------|---------|
-| ESP32-C3 | 1 | No | 4MB | MINIMAL |
-| ESP32-C5 | 1 | No | 4MB | MINIMAL |
-| ESP32-S3 | 2 | 8MB | 16MB | FULL |
+| Target | Cores | SRAM | PSRAM | Flash | Profile |
+|--------|-------|------|-------|-------|---------|
+| ESP32-C3 | 1 | 400KB | No | 4MB | MINIMAL |
+| ESP32-C5 | 1 | 400KB | No | 4MB | MINIMAL |
+| ESP32-S3 | 2 | 512KB | Optional | 4MB/16MB | MINIMAL/FULL |
+
+> **Note:** ESP32-S3 without PSRAM runs in MINIMAL mode (same as C3/C5). With 8MB PSRAM, it unlocks FULL features (LittleFS, WebSocket, HTTP proxy).
 
 ## Quick Start
 
 ```bash
 # Set target (first time or after switching)
-idf.py set-target esp32c5   # or esp32c3 / esp32s3
+idf.py set-target esp32s3   # or esp32c3 / esp32c5
 
 # Configure
 idf.py menuconfig
 # -> ESPClaw Configuration -> LLM Settings (API key, model, etc.)
-# -> ESPClaw Configuration -> Telegram (optional)
+# -> ESPClaw Configuration -> Channels -> Enable MQTT (optional)
+# -> ESPClaw Configuration -> Channels -> Telegram (optional)
 
 # Build, flash, and monitor
 idf.py build flash monitor
@@ -49,8 +58,27 @@ idf.py build flash monitor
 
 > **Important:** When switching targets, delete `sdkconfig` first:
 > ```bash
-> rm sdkconfig && idf.py set-target esp32c5 && idf.py build
+> rm -rf sdkconfig build && idf.py set-target esp32s3 && idf.py build
 > ```
+
+### ESP32-S3 Configuration
+
+For ESP32-S3 **without PSRAM** (4MB Flash, common dev boards):
+
+```bash
+# The defaults in sdkconfig.defaults.esp32s3 are already configured for 4MB Flash
+idf.py set-target esp32s3
+idf.py menuconfig  # Configure WiFi + LLM API
+idf.py build flash monitor
+```
+
+For ESP32-S3 **with PSRAM** (16MB Flash + 8MB PSRAM):
+
+```bash
+idf.py menuconfig
+# -> Serial Flasher Config -> Flash size -> 16MB
+# -> Component Config -> ESP PSRAM -> Enable PSRAM
+```
 
 ## LLM Configuration
 
@@ -68,6 +96,17 @@ Supports **any OpenAI-compatible API endpoint** plus official Anthropic API.
 
 Tested with: GPT-4o-mini, Claude 3 Haiku, GLM-4.5, DeepSeek, Qwen, etc.
 
+### Custom LLM Example (GLM)
+
+```bash
+idf.py menuconfig
+# -> ESPClaw Configuration -> LLM Settings
+#    -> LLM Backend: Custom (OpenAI-compatible)
+#    -> API Key: your_glm_api_key
+#    -> Base URL: https://open.bigmodel.cn/api/paas/v4/chat/completions
+#    -> Model name: glm-4-flash
+```
+
 ## Features
 
 ### Built-in Tools (20)
@@ -84,13 +123,13 @@ Tested with: GPT-4o-mini, Claude 3 Haiku, GLM-4.5, DeepSeek, Qwen, etc.
 
 ### Notification Channels (10)
 
-> **Status:** Serial and Telegram are fully tested and stable. Other channels are compiled and structurally complete but not yet verified on real hardware/services.
+> **Status:** Serial, Telegram, and MQTT are fully tested. Other channels are compiled and structurally complete but not yet verified on real hardware/services.
 
 | Channel | Type | Protocol | Status |
 |---------|------|----------|--------|
 | Serial | Bidirectional | UART console (always on) | **Verified** |
 | Telegram | Bidirectional | Bot API long polling | **Verified** |
-| MQTT | Bidirectional | IoT standard (Home Assistant / Node-RED) | WIP |
+| MQTT | Bidirectional | IoT standard (Home Assistant / Node-RED) | **Verified** |
 | DingTalk | Outbound | Webhook + HMAC signature | WIP |
 | Discord | Outbound | Webhook | WIP |
 | Slack | Outbound | Incoming Webhook | WIP |
@@ -100,6 +139,60 @@ Tested with: GPT-4o-mini, Claude 3 Haiku, GLM-4.5, DeepSeek, Qwen, etc.
 | Bark | Outbound | iOS push notification | WIP |
 
 All channels are conditionally compiled via `CONFIG_ESPCLAW_CHANNEL_xxx`.
+
+## MQTT Configuration
+
+### Enable MQTT Channel
+
+```bash
+idf.py menuconfig
+# -> ESPClaw Configuration -> Channels
+#    -> [*] Enable MQTT Channel
+#    -> MQTT Broker URL: mqtt://broker.emqx.io
+#    -> MQTT Username: (leave empty for anonymous)
+#    -> MQTT Password: (leave empty for anonymous)
+```
+
+### MQTT Topics
+
+ESPClaw uses the following topic pattern:
+
+| Direction | Topic Pattern |
+|-----------|---------------|
+| Subscribe (receive commands) | `espclaw/{client_id}/cmd` |
+| Publish (send responses) | `espclaw/{client_id}/response` |
+
+The `{client_id}` is auto-generated from MAC address, e.g., `espclaw_feffe2`.
+
+### Test with MQTTX
+
+1. Install MQTTX: `brew install --cask mqttx`
+2. Connect to `mqtt://broker.emqx.io:1883`
+3. Subscribe to: `espclaw/+/response` (or specific client ID)
+4. Publish to: `espclaw/{client_id}/cmd` with message like "Hello"
+
+### Test with Command Line
+
+```bash
+# Install mosquitto clients
+brew install mosquitto
+
+# Subscribe to ESP32 responses
+mosquitto_sub -h broker.emqx.io -t "espclaw/+/response" -v
+
+# Send command to ESP32 (replace {client_id} with actual ID from serial log)
+mosquitto_pub -h broker.emqx.io -t "espclaw/espclaw_feffe2/cmd" -m "你好"
+```
+
+### Public MQTT Brokers
+
+| Broker | URL | Notes |
+|--------|-----|-------|
+| EMQX | `mqtt://broker.emqx.io` | Recommended, no auth required |
+| Mosquitto | `mqtt://test.mosquitto.org` | Alternative |
+| HiveMQ | `mqtt://broker.hivemq.com` | Alternative |
+
+For production, use your own MQTT broker or cloud service (AWS IoT, Azure IoT, etc.) with TLS (`mqtts://`).
 
 ### Scheduled Tasks
 
@@ -177,14 +270,14 @@ main/
 │   ├── channel_serial.c      # Serial console
 │   ├── channel_telegram.c    # Telegram Bot (long polling)
 │   ├── telegram_helpers.h/.c # Telegram utility functions
+│   ├── channel_mqtt.c        # MQTT IoT channel
 │   ├── channel_dingtalk.c    # DingTalk webhook
 │   ├── channel_discord.c     # Discord webhook
 │   ├── channel_slack.c       # Slack webhook
 │   ├── channel_wecom.c       # WeCom (Enterprise WeChat)
 │   ├── channel_lark.c        # Lark/Feishu
 │   ├── channel_pushplus.c    # Pushplus
-│   ├── channel_bark.c        # iOS push (Bark)
-│   └── channel_mqtt.c        # MQTT IoT
+│   └── channel_bark.c        # iOS push (Bark)
 ├── provider/
 │   ├── provider.h            # Provider vtable
 │   ├── provider_anthropic.c  # Anthropic Messages API

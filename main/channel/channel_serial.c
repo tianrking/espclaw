@@ -154,6 +154,10 @@ static void serial_input_task(void *arg)
 /* -----------------------------------------------------------------------
  * Serial output task: read from outbound queue, print to serial
  * ----------------------------------------------------------------------- */
+#ifdef CONFIG_ESPCLAW_CHANNEL_MQTT
+extern void mqtt_post(const char *text);
+#endif
+
 static void serial_output_task(void *arg)
 {
     outbound_msg_t msg;
@@ -171,8 +175,13 @@ static void serial_output_task(void *arg)
                 telegram_post(msg.text, msg.chat_id);
                 break;
 #endif
+#ifdef CONFIG_ESPCLAW_CHANNEL_MQTT
+            case MSG_SOURCE_MQTT:
+                mqtt_post(msg.text);
+                break;
+#endif
             default:
-                ESP_LOGW(TAG, "Unknown outbound target: %d", msg.target);
+                /* Ignore other targets (one-way notification channels) */
                 break;
             }
         }

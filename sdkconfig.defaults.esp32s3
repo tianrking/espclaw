@@ -1,14 +1,14 @@
 # ESPClaw ESP32-S3 specific configuration
-# Target: dual-core Xtensa, 512KB SRAM, 8MB PSRAM, 16MB flash
+# Target: dual-core Xtensa, 512KB SRAM, 4MB flash (标准配置)
+
+# Flash size
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 
 # Performance optimization (S3 has room)
 CONFIG_COMPILER_OPTIMIZATION_PERF=y
 
-# PSRAM (ESP-IDF 5.5 unified key)
-CONFIG_SPIRAM=y
-CONFIG_SPIRAM_MODE_OCT=y
-CONFIG_SPIRAM_SPEED_80M=y
-CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
+# PSRAM - 禁用 (普通 ESP32-S3 可能没有)
+# CONFIG_SPIRAM is not set
 
 # Larger TLS buffers
 CONFIG_MBEDTLS_SSL_IN_CONTENT_LEN=32768
@@ -20,8 +20,8 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=12288
 # Event task stack
 CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=8192
 
-# Partition table: 16MB
-CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_16mb.csv"
+# Partition table: 4MB (适合普通 ESP32-S3)
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_4mb.csv"
 
 # Enable HTTP server for WebSocket gateway
 CONFIG_ESP_HTTPS_SERVER_ENABLE=y
